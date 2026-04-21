@@ -17,8 +17,8 @@
 deployment:
   tasks:
     # ─── EDIT THESE TWO LINES ───────────────────────────────────
-    - export DEPLOYPATH=/home/corganos/public_html/goldprice/
-    - export PRIVATEPATH=/home/corganos/private/
+    - export DEPLOYPATH=/home8/ivancicg/goldprice.corgano.com/
+    - export PRIVATEPATH=/home8/ivancicg/private/
     # ────────────────────────────────────────────────────────────
 
     # ─── public web files (served at goldprice.corgano.com) ─────
