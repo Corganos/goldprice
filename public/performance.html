@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Price Performance · Annual % Change by Currency — Corgano</title>
+<meta name="description" content="Historical gold price performance by calendar year, in 9 major currencies (USD, EUR, GBP, JPY, CAD, AUD, CHF, INR, CNY). Annual percentage change, 2011–2026.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+  :root[data-theme="dark"] {
+    --bg: #0a0b0d;
+    --bg-raised: #131417;
+    --bg-card: #17191d;
+    --bg-hover: #1e2126;
+    --border: #23262b;
+    --border-soft: #1b1e22;
+    --text: #e8eaed;
+    --text-muted: #8a8e95;
+    --text-dim: #565a62;
+    --gold: #e8b547;
+    --gold-bright: #f4c969;
+    --gold-dim: #8a7347;
+    --up: #4ade80;
+    --up-strong: #22c55e;
+    --up-muted: rgba(74, 222, 128, 0.12);
+    --down: #f87171;
+    --down-strong: #dc2626;
+    --down-muted: rgba(248, 113, 113, 0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 800px 400px at 50% 0%, rgba(232,181,71,0.06), transparent 60%);
+    background-attachment: fixed;
+  }
+  a { color: inherit; text-decoration: none; }
+
+  /* ─── top bar (simplified) ─── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.5rem;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.2rem;
+  }
+  .brand em { color: var(--gold); font-style: normal; }
+  .breadcrumbs {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .breadcrumbs a:hover { color: var(--gold); }
+  .breadcrumbs .sep { margin: 0 8px; color: var(--text-dim); }
+
+  /* ─── hero ─── */
+  .hero {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 3.5rem 2rem 2rem;
+    text-align: center;
+  }
+  .hero-kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hero-kicker::before, .hero-kicker::after {
+    content: '';
+    width: 24px; height: 1px; background: var(--gold-dim);
+  }
+  h1 {
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 400;
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin-bottom: 1rem;
+  }
+  h1 em { font-style: italic; color: var(--gold); }
+  .hero-lede {
+    max-width: 60ch;
+    margin: 0 auto 1.5rem;
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .hero-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  /* ─── table container ─── */
+  .table-wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem 2rem 2rem;
+  }
+  .table-scroll {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg-raised);
+  }
+
+  table.perf {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    min-width: 960px;
+  }
+  table.perf thead th {
+    position: sticky;
+    top: 0;
+    background: var(--bg-card);
+    padding: 14px 12px;
+    text-align: right;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  table.perf thead th:first-child {
+    text-align: left;
+    color: var(--text-muted);
+    padding-left: 18px;
+  }
+  table.perf tbody td {
+    padding: 10px 12px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid var(--border-soft);
+    white-space: nowrap;
+  }
+  table.perf tbody tr:last-child td { border-bottom: none; }
+  table.perf tbody td:first-child {
+    text-align: left;
+    padding-left: 18px;
+    color: var(--text);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    font-size: 13.5px;
+  }
+  table.perf tbody tr:hover td { background: var(--bg-hover); }
+
+  table.perf tbody tr.avg td {
+    background: rgba(232, 181, 71, 0.04);
+    border-top: 1px solid var(--gold-dim);
+    border-bottom: 1px solid var(--gold-dim);
+    font-weight: 600;
+  }
+  table.perf tbody tr.avg td:first-child { color: var(--gold); }
+
+  /* up/down cell tinting — subtle, so the row still reads cleanly */
+  .cell-up { color: var(--up); }
+  .cell-down { color: var(--down); }
+  .cell-strong-up { color: var(--up-strong); background: var(--up-muted); }
+  .cell-strong-down { color: var(--down-strong); background: var(--down-muted); }
+
+  /* ─── callouts below table ─── */
+  .callouts {
+    max-width: 1400px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  .callout {
+    padding: 1.25rem;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+  .callout-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 8px;
+  }
+  .callout-value {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 1.6rem;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  .callout-detail {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ─── notes section ─── */
+  .notes {
+    max-width: 1000px;
+    margin: 3rem auto;
+    padding: 0 2rem;
+  }
+  .notes h2 {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.4rem;
+    color: var(--gold);
+    margin-bottom: 1rem;
+  }
+  .notes p {
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+    font-size: 14px;
+  }
+  .notes strong { color: var(--text); font-weight: 500; }
+
+  /* ─── footer ─── */
+  footer {
+    max-width: 1400px;
+    margin: 3rem auto 0;
+    padding: 2rem;
+    border-top: 1px solid var(--border-soft);
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  footer a { color: var(--text-muted); margin: 0 8px; }
+  footer a:hover { color: var(--gold); }
+
+  @media (max-width: 900px) {
+    .callouts { grid-template-columns: 1fr; }
+    .hero { padding: 2.5rem 1rem 1rem; }
+    .table-wrap { padding: 1rem; }
+    .notes { padding: 0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">Gold<em>Terminal</em></div>
+  <nav class="breadcrumbs">
+    <a href="/">Terminal</a>
+    <span class="sep">·</span>
+    <a href="/">Data</a>
+    <span class="sep">·</span>
+    <span style="color: var(--gold);">Annual Performance</span>
+  </nav>
+</header>
+
+<section class="hero">
+  <div class="hero-kicker">Reference Data</div>
+  <h1>Gold Price <em>Performance</em><br>by Year &amp; Currency</h1>
+  <p class="hero-lede">
+    Annual percentage change in the gold price, in nine major currencies. Positive numbers mean gold appreciated against that currency (i.e. the currency weakened relative to gold). A useful tool for context on long-term performance — and for measuring gold's role as a hedge against your own currency's debasement.
+  </p>
+  <div class="hero-meta">2011 – 2026 · Data sourced from LBMA / Kitco · Updated through April 21, 2026</div>
+</section>
+
+<div class="table-wrap">
+  <div class="table-scroll">
+    <table class="perf">
+      <thead>
+        <tr>
+          <th>Year</th>
+          <th>USD</th>
+          <th>AUD</th>
+          <th>CAD</th>
+          <th>CHF</th>
+          <th>CNY</th>
+          <th>EUR</th>
+          <th>GBP</th>
+          <th>INR</th>
+          <th>JPY</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>2011</td>
+          <td class="cell-up">+10.1%</td>
+          <td class="cell-up">+10.2%</td>
+          <td class="cell-up">+13.5%</td>
+          <td class="cell-up">+11.2%</td>
+          <td class="cell-up">+5.9%</td>
+          <td class="cell-up">+14.2%</td>
+          <td class="cell-up">+10.5%</td>
+          <td class="cell-strong-up">+31.1%</td>
+          <td class="cell-up">+4.5%</td>
+        </tr>
+        <tr>
+          <td>2012</td>
+          <td class="cell-up">+7.0%</td>
+          <td class="cell-up">+5.4%</td>
+          <td class="cell-up">+4.3%</td>
+          <td class="cell-up">+4.2%</td>
+          <td class="cell-up">+6.2%</td>
+          <td class="cell-up">+4.9%</td>
+          <td class="cell-up">+2.2%</td>
+          <td class="cell-up">+10.3%</td>
+          <td class="cell-up">+20.7%</td>
+        </tr>
+        <tr>
+          <td>2013</td>
+          <td class="cell-strong-down">−28.3%</td>
+          <td class="cell-down">−16.2%</td>
+          <td class="cell-down">−23.0%</td>
+          <td class="cell-strong-down">−30.1%</td>
+          <td class="cell-strong-down">−30.2%</td>
+          <td class="cell-strong-down">−31.2%</td>
+          <td class="cell-strong-down">−29.4%</td>
+          <td class="cell-down">−18.7%</td>
+          <td class="cell-down">−12.8%</td>
+        </tr>
+        <tr>
+          <td>2014</td>
+          <td class="cell-down">−1.5%</td>
+          <td class="cell-up">+7.7%</td>
+          <td class="cell-up">+7.9%</td>
+          <td class="cell-up">+9.9%</td>
+          <td class="cell-down">−1.2%</td>
+          <td class="cell-up">+11.6%</td>
+          <td class="cell-up">+4.4%</td>
+          <td class="cell-up">+0.8%</td>
+          <td class="cell-up">+12.3%</td>
+        </tr>
+        <tr>
+          <td>2015</td>
+          <td class="cell-down">−10.4%</td>
+          <td class="cell-up">+0.4%</td>
+          <td class="cell-up">+7.5%</td>
+          <td class="cell-down">−9.9%</td>
+          <td class="cell-down">−6.2%</td>
+          <td class="cell-down">−0.3%</td>
+          <td class="cell-down">−5.2%</td>
+          <td class="cell-down">−5.9%</td>
+          <td class="cell-down">−10.1%</td>
+        </tr>
+        <tr>
+          <td>2016</td>
+          <td class="cell-up">+9.1%</td>
+          <td class="cell-up">+10.5%</td>
+          <td class="cell-up">+5.9%</td>
+          <td class="cell-up">+10.8%</td>
+          <td class="cell-up">+16.8%</td>
+          <td class="cell-up">+12.4%</td>
+          <td class="cell-strong-up">+30.2%</td>
+          <td class="cell-up">+11.9%</td>
+          <td class="cell-up">+5.8%</td>
+        </tr>
+        <tr>
+          <td>2017</td>
+          <td class="cell-up">+13.6%</td>
+          <td class="cell-up">+4.6%</td>
+          <td class="cell-up">+6.0%</td>
+          <td class="cell-up">+8.1%</td>
+          <td class="cell-up">+6.4%</td>
+          <td class="cell-down">−1.0%</td>
+          <td class="cell-up">+3.2%</td>
+          <td class="cell-up">+6.4%</td>
+          <td class="cell-up">+4.9%</td>
+        </tr>
+        <tr>
+          <td>2018</td>
+          <td class="cell-down">−2.1%</td>
+          <td class="cell-up">+8.5%</td>
+          <td class="cell-up">+6.6%</td>
+          <td class="cell-down">−1.2%</td>
+          <td class="cell-up">+3.5%</td>
+          <td class="cell-up">+2.7%</td>
+          <td class="cell-up">+3.8%</td>
+          <td class="cell-up">+6.6%</td>
+          <td class="cell-down">−4.7%</td>
+        </tr>
+        <tr>
+          <td>2019</td>
+          <td class="cell-strong-up">+18.9%</td>
+          <td class="cell-strong-up">+19.1%</td>
+          <td class="cell-up">+13.0%</td>
+          <td class="cell-up">+17.1%</td>
+          <td class="cell-strong-up">+20.3%</td>
+          <td class="cell-strong-up">+22.7%</td>
+          <td class="cell-up">+14.2%</td>
+          <td class="cell-strong-up">+21.6%</td>
+          <td class="cell-up">+17.7%</td>
+        </tr>
+        <tr>
+          <td>2020</td>
+          <td class="cell-strong-up">+24.6%</td>
+          <td class="cell-up">+13.6%</td>
+          <td class="cell-up">+22.2%</td>
+          <td class="cell-up">+14.0%</td>
+          <td class="cell-up">+16.9%</td>
+          <td class="cell-up">+14.4%</td>
+          <td class="cell-strong-up">+20.9%</td>
+          <td class="cell-strong-up">+27.9%</td>
+          <td class="cell-strong-up">+18.5%</td>
+        </tr>
+        <tr>
+          <td>2021</td>
+          <td class="cell-down">−3.5%</td>
+          <td class="cell-up">+2.2%</td>
+          <td class="cell-down">−4.1%</td>
+          <td class="cell-down">−2.0%</td>
+          <td class="cell-down">−6.1%</td>
+          <td class="cell-up">+2.9%</td>
+          <td class="cell-down">−2.5%</td>
+          <td class="cell-down">−1.6%</td>
+          <td class="cell-up">+7.5%</td>
+        </tr>
+        <tr>
+          <td>2022</td>
+          <td class="cell-down">−0.3%</td>
+          <td class="cell-up">+6.5%</td>
+          <td class="cell-up">+6.9%</td>
+          <td class="cell-down">−1.0%</td>
+          <td class="cell-up">+8.3%</td>
+          <td class="cell-up">+6.0%</td>
+          <td class="cell-up">+11.8%</td>
+          <td class="cell-up">+10.7%</td>
+          <td class="cell-up">+13.4%</td>
+        </tr>
+        <tr>
+          <td>2023</td>
+          <td class="cell-up">+12.8%</td>
+          <td class="cell-up">+12.6%</td>
+          <td class="cell-up">+9.9%</td>
+          <td class="cell-up">+2.4%</td>
+          <td class="cell-up">+15.7%</td>
+          <td class="cell-up">+8.7%</td>
+          <td class="cell-up">+6.6%</td>
+          <td class="cell-up">+13.4%</td>
+          <td class="cell-strong-up">+21.6%</td>
+        </tr>
+        <tr>
+          <td>2024</td>
+          <td class="cell-strong-up">+26.3%</td>
+          <td class="cell-strong-up">+38.3%</td>
+          <td class="cell-strong-up">+37.3%</td>
+          <td class="cell-up">+15.3%</td>
+          <td class="cell-strong-up">+30.3%</td>
+          <td class="cell-strong-up">+34.2%</td>
+          <td class="cell-strong-up">+28.2%</td>
+          <td class="cell-strong-up">+29.8%</td>
+          <td class="cell-strong-up">+40.0%</td>
+        </tr>
+        <tr>
+          <td>2025</td>
+          <td class="cell-strong-up">+65.5%</td>
+          <td class="cell-strong-up">+53.7%</td>
+          <td class="cell-strong-up">+58.3%</td>
+          <td class="cell-strong-up">+45.1%</td>
+          <td class="cell-strong-up">+59.7%</td>
+          <td class="cell-strong-up">+66.6%</td>
+          <td class="cell-strong-up">+54.7%</td>
+          <td class="cell-strong-up">+74.7%</td>
+          <td class="cell-strong-up">+65.5%</td>
+        </tr>
+        <tr>
+          <td>2026 YTD</td>
+          <td class="cell-up">+11.2%</td>
+          <td class="cell-up">+3.4%</td>
+          <td class="cell-up">+10.6%</td>
+          <td class="cell-up">+9.1%</td>
+          <td class="cell-up">+8.4%</td>
+          <td class="cell-up">+10.7%</td>
+          <td class="cell-up">+10.5%</td>
+          <td class="cell-up">+15.1%</td>
+          <td class="cell-up">+12.5%</td>
+        </tr>
+        <tr class="avg">
+          <td>Average</td>
+          <td>+9.6%</td>
+          <td>+11.3%</td>
+          <td>+11.4%</td>
+          <td>+7.8%</td>
+          <td>+9.8%</td>
+          <td>+10.0%</td>
+          <td>+10.3%</td>
+          <td>+14.4%</td>
+          <td>+13.9%</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="callouts">
+  <div class="callout">
+    <div class="callout-label">Best Year</div>
+    <div class="callout-value">2025 <span style="color:var(--up);font-size:1rem;">+74.7% (INR)</span></div>
+    <div class="callout-detail">Gold's strongest calendar year since 1979, driven by central-bank buying, de-dollarisation flows, and persistent sovereign-debt concerns.</div>
+  </div>
+  <div class="callout">
+    <div class="callout-label">Worst Year</div>
+    <div class="callout-value">2013 <span style="color:var(--down);font-size:1rem;">−31.2% (EUR)</span></div>
+    <div class="callout-detail">Unwinding of the post-2008 crisis trade, risk-on rotation into equities, and ETF outflows weighed heavily across every major currency.</div>
+  </div>
+  <div class="callout">
+    <div class="callout-label">Consistency</div>
+    <div class="callout-value">11 of 16 years <span style="color:var(--up);font-size:1rem;">positive in USD</span></div>
+    <div class="callout-detail">Gold has posted positive annual returns in roughly two-thirds of years since 2011, with the strongest streaks during periods of monetary or geopolitical stress.</div>
+  </div>
+</div>
+
+<section class="notes">
+  <h2>How to read this table</h2>
+  <p>
+    Each cell shows <strong>gold's percentage change against that currency during that calendar year</strong>. A green +10% in the INR column means an investor measuring their wealth in Indian rupees saw their gold holdings appreciate 10% that year.
+  </p>
+  <p>
+    The currency columns tell a second story alongside the commodity story: when gold is up 18% in USD but 27% in INR for the same year, the extra 9 points comes from the rupee weakening against the dollar. This is why <strong>gold's role as a wealth-preservation asset varies by where you live</strong>. An Indian investor and a Swiss investor bought the same ounce but experienced very different returns.
+  </p>
+  <p>
+    The green highlights mark years of +20% or stronger; red highlights mark years of −20% or worse. Darker cell backgrounds flag the extremes in either direction.
+  </p>
+  <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 1.5rem;">
+    <strong>Methodology:</strong> Year-end close from the London PM Fix (LBMA), converted to each currency at year-end spot rates. 2026 row is year-to-date through the most recent update. Data is indicative and may differ slightly from other published tables depending on cutoff time and FX source.
+  </p>
+</section>
+
+<footer>
+  <a href="/">← Back to Terminal</a>
+  <a href="#">Download CSV</a>
+  <a href="#">Methodology</a>
+  <a href="#">Contact</a>
+  <br><br>
+  © 2026 Corgano Network · Data provided as-is · Not investment advice
+</footer>
+
+</body>
+</html>

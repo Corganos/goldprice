@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# API endpoint returns raw JSON — no value for search indexing
+Disallow: /api/
+
+# Uncomment once sitemap.xml is generated:
+# Sitemap: https://goldprice.corgano.com/sitemap.xml

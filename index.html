@@ -1,0 +1,3490 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gold Terminal — Corgano Network</title>
+<meta name="description" content="Live precious metals dashboard: gold, silver, platinum, palladium. Spot prices, ratios, news, miners, and FX — all on one page.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+<style>
+  :root[data-theme="dark"] {
+    --bg: #0a0b0d;
+    --bg-raised: #131417;
+    --bg-card: #17191d;
+    --bg-hover: #1e2126;
+    --border: #23262b;
+    --border-soft: #1b1e22;
+    --text: #e8eaed;
+    --text-muted: #8a8e95;
+    --text-dim: #565a62;
+    --gold: #e8b547;
+    --gold-bright: #f4c969;
+    --gold-dim: #8a7347;
+    --up: #4ade80;
+    --up-bg: rgba(74, 222, 128, 0.1);
+    --down: #f87171;
+    --down-bg: rgba(248, 113, 113, 0.1);
+    --flat: #8a8e95;
+    --link: #7dd3fc;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #faf7f0;
+    --bg-raised: #ffffff;
+    --bg-card: #ffffff;
+    --bg-hover: #f3ede0;
+    --border: #e5ddc8;
+    --border-soft: #eee6d0;
+    --text: #1a1510;
+    --text-muted: #6b6152;
+    --text-dim: #9a8e7a;
+    --gold: #b8893a;
+    --gold-bright: #c9a961;
+    --gold-dim: #8a7347;
+    --up: #15803d;
+    --up-bg: rgba(21, 128, 61, 0.08);
+    --down: #b91c1c;
+    --down-bg: rgba(185, 28, 28, 0.08);
+    --flat: #6b6152;
+    --link: #0369a1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+  /* ─── monospace utilities ─── */
+  .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .flat { color: var(--flat); }
+
+  /* ─── top bar ─── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 0.65rem 1.25rem;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .brand-mark {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark em { color: var(--gold); font-style: normal; }
+  .brand-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .topnav {
+    display: flex;
+    gap: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .topnav a { transition: color 0.15s; padding: 2px 0; }
+  .topnav a:hover { color: var(--gold); }
+  .topnav a.active { color: var(--text); border-bottom: 1px solid var(--gold); }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--up);
+    animation: livepulse 2s ease-in-out infinite;
+  }
+  @keyframes livepulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+    50% { opacity: 0.5; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0); }
+  }
+  .status-label { color: var(--text-dim); }
+  .status-value { color: var(--text); font-weight: 500; }
+  .countdown-value { color: var(--gold); }
+
+  .icon-btn {
+    width: 28px; height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .refresh-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+  .refresh-btn svg { width: 11px; height: 11px; }
+
+  select.refresh-select {
+    padding: 5px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    border-radius: 2px;
+    appearance: none;
+    padding-right: 22px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='%238a8e95'><path d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 8px;
+  }
+
+  .ai-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: #1a1510;
+    border: none;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    transition: transform 0.15s;
+  }
+  .ai-trigger:hover { transform: translateY(-1px); }
+  .ai-trigger svg { width: 12px; height: 12px; }
+
+  /* ─── ticker ─── */
+  .ticker-strip {
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-track {
+    display: inline-flex;
+    gap: 2.25rem;
+    padding: 6px 0;
+    animation: ticker 80s linear infinite;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+  }
+  .ticker-item { color: var(--text-muted); }
+  .ticker-item strong {
+    color: var(--text);
+    font-weight: 600;
+    margin-right: 6px;
+    letter-spacing: 0.03em;
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ─── grid layout ─── */
+  .board {
+    padding: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.75rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .panel-title .gold-dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--gold);
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .panel-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .panel-body { padding: 10px; flex: 1; }
+  .panel-body.tight { padding: 0; }
+
+  /* ─── col spans ─── */
+  .c1  { grid-column: span 1; } .c2  { grid-column: span 2; }
+  .c3  { grid-column: span 3; } .c4  { grid-column: span 4; }
+  .c5  { grid-column: span 5; } .c6  { grid-column: span 6; }
+  .c7  { grid-column: span 7; } .c8  { grid-column: span 8; }
+  .c9  { grid-column: span 9; } .c10 { grid-column: span 10; }
+  .c12 { grid-column: span 12; }
+
+  /* ─── spot hero panel ─── */
+  .spot-hero { padding: 12px 14px; }
+  .spot-symbol {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .spot-price {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 2.75rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin: 6px 0 4px;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    transition: color 0.4s;
+  }
+  .spot-price.flash-up { color: var(--up); }
+  .spot-price.flash-down { color: var(--down); }
+  .spot-change {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+  }
+  .spot-change .arrow { margin-right: 2px; }
+
+  .spot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .spot-kv { display: flex; flex-direction: column; gap: 2px; }
+  .spot-kv-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .spot-kv-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ─── chart panel ─── */
+  .chart-tabs {
+    display: flex;
+    gap: 0;
+    border-left: 1px solid var(--border-soft);
+  }
+  .chart-tab {
+    padding: 4px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    border-right: 1px solid var(--border-soft);
+    transition: all 0.15s;
+  }
+  .chart-tab:hover { color: var(--text); background: var(--bg-hover); }
+  .chart-tab.active { color: var(--gold); background: var(--bg-hover); }
+
+  .chart-canvas { position: relative; width: 100%; height: 220px; }
+  .chart-canvas svg { width: 100%; height: 100%; display: block; }
+  .chart-legend {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 10px 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .chart-expand {
+    padding: 4px 10px;
+    border-top: 1px solid var(--border-soft);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--link);
+    text-align: right;
+    letter-spacing: 0.05em;
+  }
+  .chart-expand:hover { color: var(--gold); }
+
+  /* ─── metals stack (silver/plat/pall/rhodium) ─── */
+  .metals-stack { display: flex; flex-direction: column; }
+  .metal-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .metal-row:last-child { border-bottom: none; }
+  .metal-row:hover { background: var(--bg-hover); }
+  .metal-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    min-width: 60px;
+  }
+  .metal-name strong { color: var(--text); display: block; font-weight: 500; font-size: 12.5px; letter-spacing: 0.02em; }
+  .metal-spark { height: 28px; }
+  .metal-vals { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .metal-price { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .metal-chg { font-size: 10.5px; margin-top: 1px; }
+
+  /* ─── KGI attribution ─── */
+  .kgi-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border-soft);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+  .kgi-row:last-child { border-bottom: none; font-weight: 600; padding-top: 10px; }
+  .kgi-row-label { color: var(--text-muted); }
+  .kgi-row-value { font-variant-numeric: tabular-nums; }
+  .kgi-bar {
+    height: 6px;
+    background: var(--bg-card);
+    border-radius: 1px;
+    margin-top: 10px;
+    display: flex;
+    overflow: hidden;
+  }
+  .kgi-bar-seg {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+  }
+  .kgi-bar-usd { background: linear-gradient(90deg, var(--down), #c74c4c); flex-basis: 10%; }
+  .kgi-bar-buyers { background: linear-gradient(90deg, #4a9d60, var(--up)); flex-basis: 90%; }
+  .kgi-summary {
+    margin-top: 10px;
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-left: 2px solid var(--gold);
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 11.5px;
+    font-style: italic;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  /* ─── ratios ─── */
+  .ratio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border-soft);
+  }
+  .ratio-cell {
+    background: var(--bg-raised);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ratio-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .ratio-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .ratio-chg { font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
+
+  /* ─── generic data table ─── */
+  table.dt {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+  }
+  table.dt th {
+    text-align: left;
+    padding: 7px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-soft);
+    position: sticky;
+    top: 0;
+  }
+  table.dt th.num, table.dt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.dt td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
+  }
+  table.dt tr:last-child td { border-bottom: none; }
+  table.dt tr:hover td { background: var(--bg-hover); }
+  table.dt .sym {
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.03em;
+  }
+  table.dt .name {
+    color: var(--text-muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+  }
+
+  /* ─── news feed ─── */
+  .news-list { max-height: 480px; overflow-y: auto; }
+  .news-list::-webkit-scrollbar { width: 6px; }
+  .news-list::-webkit-scrollbar-track { background: transparent; }
+  .news-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .news-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    align-items: start;
+    cursor: pointer;
+  }
+  .news-item:hover { background: var(--bg-hover); }
+  .news-item:hover .news-head { color: var(--gold); }
+  .news-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }
+  .news-source { color: var(--gold); margin-right: 6px; }
+  .news-head {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--text);
+    transition: color 0.15s;
+    font-weight: 400;
+  }
+  .news-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 5px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 2px;
+    white-space: nowrap;
+    align-self: start;
+  }
+
+  /* ─── commentary list ─── */
+  .cmt-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    cursor: pointer;
+  }
+  .cmt-item:hover { background: var(--bg-hover); }
+  .cmt-item:hover .cmt-title { color: var(--gold); }
+  .cmt-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 13px;
+    line-height: 1.25;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 3px;
+    transition: color 0.15s;
+  }
+  .cmt-byline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .cmt-byline .author { color: var(--text-muted); }
+
+  /* ─── lease rates / london fix compact tables ─── */
+  .mini-table { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .mini-table th, .mini-table td {
+    padding: 4px 8px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mini-table th:first-child, .mini-table td:first-child { text-align: left; color: var(--text-muted); }
+  .mini-table th {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mini-table td { border-bottom: 1px solid var(--border-soft); color: var(--text); }
+  .mini-table tr:last-child td { border-bottom: none; }
+
+  /* ─── featured miners (ad-style) ─── */
+  .featured-list { padding: 4px 0; }
+  .featured-row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 11.5px;
+  }
+  .featured-row:hover { background: var(--bg-hover); }
+  .featured-row:hover .featured-name { color: var(--gold); }
+  .featured-check {
+    width: 11px; height: 11px;
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    background: var(--bg-card);
+  }
+  .featured-name { color: var(--text); transition: color 0.15s; }
+  .featured-ticker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* ─── footer ─── */
+  footer {
+    padding: 2rem 1.25rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-raised);
+    margin-top: 1rem;
+  }
+  .foot-grid {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .foot-brand-line {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .foot-brand-line strong { color: var(--gold); font-style: normal; font-weight: 500; }
+  .foot-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; max-width: 40ch; }
+  .foot-col h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .foot-col a { font-size: 12px; color: var(--text-muted); transition: color 0.15s; }
+  .foot-col a:hover { color: var(--gold); }
+  .foot-bottom {
+    max-width: 1600px;
+    margin: 1.5rem auto 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+
+  /* ─── AI widget ─── */
+  .ai-widget {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 200;
+  }
+  .ai-fab {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: #1a1510;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(232, 181, 71, 0.3), 0 0 0 4px rgba(232, 181, 71, 0.12);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .ai-fab:hover { transform: scale(1.08); }
+  .ai-fab svg { width: 22px; height: 22px; }
+  .ai-fab.open { transform: rotate(45deg); }
+
+  .ai-panel {
+    position: absolute;
+    bottom: 64px;
+    right: 0;
+    width: 360px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  .ai-panel.open { display: flex; animation: slideUp 0.25s ease; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .ai-panel-head {
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .ai-panel-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .ai-panel-title em { font-style: italic; color: var(--gold); }
+  .ai-panel-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .ai-service-row {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-card);
+  }
+  .ai-service-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    align-self: center;
+    margin-right: 6px;
+  }
+  .ai-svc-btn {
+    padding: 4px 10px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .ai-svc-btn:hover { color: var(--text); border-color: var(--gold-dim); }
+  .ai-svc-btn.active { color: #1a1510; background: var(--gold); border-color: var(--gold); font-weight: 600; }
+
+  .ai-prompts { padding: 10px 14px; }
+  .ai-prompts h5 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .ai-prompt-list { display: flex; flex-direction: column; gap: 4px; }
+  .ai-prompt-btn {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 2px;
+    font-size: 12px;
+    color: var(--text);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ai-prompt-btn:hover {
+    border-color: var(--gold-dim);
+    background: var(--bg-hover);
+  }
+  .ai-prompt-btn svg {
+    width: 11px; height: 11px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .ai-prompt-btn:hover svg { color: var(--gold); transform: translateX(2px); }
+
+  .ai-custom {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-soft);
+    background: var(--bg-card);
+    display: flex;
+    gap: 6px;
+  }
+  .ai-custom input {
+    flex: 1;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+  }
+  .ai-custom input:focus { outline: none; border-color: var(--gold-dim); }
+  .ai-custom button {
+    padding: 7px 12px;
+    background: var(--gold);
+    color: #1a1510;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── Corgano in-house commentary badges ─── */
+  .cmt-corgano {
+    position: relative;
+    border-left: 2px solid var(--gold);
+  }
+  .cmt-corgano:hover { background: var(--bg-hover); }
+  .cmt-corgano-badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    padding: 1px 5px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .cmt-category {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-right: 6px;
+  }
+  .cmt-excerpt {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--text-muted);
+    margin-top: 4px;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ─── bid/ask compact strip ─── */
+  .bid-ask-strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .bid-ask-strip em {
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 9.5px;
+    margin-right: 4px;
+  }
+  .bid-ask-strip b { color: var(--text); font-weight: 500; }
+
+  /* ─── per-unit conversion strip ─── */
+  .unit-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border-soft);
+    border: 1px solid var(--border-soft);
+    margin-bottom: 14px;
+  }
+  .unit-cell {
+    background: var(--bg-raised);
+    padding: 8px 4px;
+    text-align: center;
+  }
+  .unit-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+  }
+  .unit-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ─── multi-timeframe performance table ─── */
+  .perf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .perf-table th {
+    padding: 6px 6px 6px 0;
+    text-align: left;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .perf-table th.num, .perf-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .perf-table td {
+    padding: 5px 6px 5px 0;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
+  }
+  .perf-table td:first-child {
+    color: var(--text-muted);
+    font-size: 10.5px;
+  }
+  .perf-table tr:last-child td { border-bottom: none; }
+  .perf-table tr:hover td { background: var(--bg-hover); }
+
+  /* ─── fallback-mode styles ─── */
+  .fallback-chart {
+    display: block;
+    padding: 1rem;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 3px;
+    text-align: center;
+    text-decoration: none;
+    transition: border-color 0.2s;
+  }
+  .fallback-chart:hover { border-color: var(--gold-dim); }
+  .fallback-chart img {
+    max-width: 100%;
+    height: auto;
+    filter: saturate(0.85);
+    border-radius: 2px;
+  }
+  .fallback-attribution {
+    display: block;
+    margin-top: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .fallback-pill {
+    background: rgba(248, 113, 113, 0.08) !important;
+    border-color: var(--down) !important;
+  }
+  .fallback-pill .status-label { color: var(--down) !important; }
+  .fallback-pill .fallback-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--down);
+    animation: livepulse 1.5s ease-in-out infinite;
+  }
+  .fallback-reason {
+    color: var(--text-dim);
+    font-size: 9.5px;
+    text-transform: lowercase;
+    letter-spacing: 0.05em;
+  }
+  .stale { opacity: 0.55; }
+
+  /* ─── CORGANO NETWORK STRIP (top of page) ─── */
+  .network-strip {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 1.5rem;
+    height: 30px;
+    background: #0d0e11;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .network-strip-label {
+    color: var(--gold);
+    margin-right: 1.25rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    letter-spacing: 0.22em;
+  }
+  .network-strip-label::before {
+    content: '◆';
+    margin-right: 6px;
+    color: var(--gold-dim);
+  }
+  .network-strip nav {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .network-strip nav a {
+    position: relative;
+    padding: 0 14px;
+    line-height: 30px;
+    color: var(--text-dim);
+    transition: color 0.15s;
+  }
+  .network-strip nav a:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--border);
+  }
+  .network-strip nav a:hover { color: var(--text); }
+  .network-strip nav a.current { color: var(--gold); }
+  .network-strip nav a.current::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 0;
+    height: 2px;
+    background: var(--gold);
+  }
+  .network-strip nav a.future {
+    color: var(--text-dim);
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .network-strip nav a.future::after-text {
+    content: ' soon';
+    color: var(--gold-dim);
+  }
+  .network-strip-tag {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 9.5px;
+    flex-shrink: 0;
+  }
+
+  /* ─── cross-link indicators on data rows ─── */
+  a.ticker-item {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.ticker-item:hover {
+    color: var(--gold) !important;
+    background: var(--bg-hover);
+  }
+  a.ticker-item:hover strong { color: var(--gold); }
+  .metal-row.linkable {
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .metal-row.linkable:hover { background: var(--bg-hover); }
+  .metal-row.linkable:hover .metal-name strong { color: var(--gold); }
+  .metal-row.linkable::after {
+    content: '→';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .metal-row.linkable { position: relative; padding-right: 20px; }
+  .metal-row.linkable:hover::after { opacity: 1; color: var(--gold); transform: translateY(-50%) translateX(3px); }
+
+  /* ─── ratios panel: "see silver →" subtle inline CTA ─── */
+  .ratio-cell .ratio-cross {
+    display: block;
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    transition: color 0.15s;
+  }
+  .ratio-cell .ratio-cross:hover { color: var(--gold); }
+  .ratio-cell .ratio-cross::after { content: ' →'; }
+
+  /* ─── CORGANO NETWORK STRIP END ─── */
+
+  /* ─── MEGA FOOTER ─── */
+  .mega-footer {
+    margin-top: 4rem;
+    background: var(--bg-raised);
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 1.5rem 1.25rem;
+  }
+  .mf-inner { max-width: 1600px; margin: 0 auto; }
+
+  .mf-brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 2rem;
+  }
+  .mf-brand-line {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.3rem;
+    color: var(--text-muted);
+    letter-spacing: -0.01em;
+  }
+  .mf-brand-line strong { color: var(--gold); font-weight: 500; font-style: normal; }
+  .mf-brand-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .mf-network { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .mf-network a {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .mf-network a:hover { color: var(--gold); border-color: var(--gold-dim); background: var(--bg-hover); }
+  .mf-network a.current { color: var(--gold); border-color: var(--gold-dim); }
+
+  .mf-section {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mf-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mf-section-label::before {
+    content: '';
+    width: 5px; height: 5px;
+    background: var(--gold);
+    border-radius: 50%;
+  }
+  .mf-section-label .mf-section-meta {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: none;
+  }
+
+  .mf-grid { display: grid; gap: 1.5rem 2rem; }
+  .mf-g3 { grid-template-columns: repeat(3, 1fr); }
+  .mf-g4 { grid-template-columns: repeat(4, 1fr); }
+  .mf-g5 { grid-template-columns: repeat(5, 1fr); }
+  .mf-g6 { grid-template-columns: repeat(6, 1fr); }
+
+  .mf-col h5 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mf-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mf-col li a {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 2px 0;
+    line-height: 1.35;
+    transition: color 0.15s, padding-left 0.15s;
+  }
+  .mf-col li a:hover { color: var(--gold); padding-left: 4px; }
+  .mf-col li a.q {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .mf-col li a.q:hover { color: var(--gold); }
+
+  .mf-region h6 {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--gold);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .mf-apps {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .mf-app-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .mf-app-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+  .mf-bottom {
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .mf-copyright {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .mf-legal {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .mf-legal a { color: var(--text-dim); transition: color 0.15s; }
+  .mf-legal a:hover { color: var(--gold); }
+
+  .mf-disclaimer {
+    padding-top: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    line-height: 1.7;
+    text-align: center;
+    border-top: 1px solid var(--border-soft);
+    margin-top: 1rem;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (max-width: 1200px) {
+    .mf-g5, .mf-g6 { grid-template-columns: repeat(3, 1fr); }
+    .mf-g4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .mega-footer { padding: 2rem 1rem 1rem; }
+    .mf-g3, .mf-g4, .mf-g5, .mf-g6 { grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .mf-brand { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ─── responsive ─── */
+  @media (max-width: 1400px) {
+    .board { grid-template-columns: repeat(8, 1fr); }
+    .c3 { grid-column: span 4; }
+    .c4 { grid-column: span 4; }
+    .c5 { grid-column: span 4; }
+    .c6 { grid-column: span 4; }
+    .c7 { grid-column: span 8; }
+    .c8 { grid-column: span 8; }
+    .c9 { grid-column: span 8; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    .board { grid-template-columns: 1fr; gap: 0.5rem; padding: 0.5rem; }
+    .board > .panel { grid-column: span 1 !important; }
+    .topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; }
+    .topnav { display: none; }
+    .spot-price { font-size: 2.2rem; }
+    .ai-panel { width: calc(100vw - 2.5rem); }
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════ CORGANO NETWORK STRIP ═══════ -->
+<div class="network-strip" role="navigation" aria-label="Corgano Network">
+  <div class="network-strip-label">Corgano Network</div>
+  <nav>
+    <a href="/" class="current">Gold</a>
+    <a href="https://silverprice.corgano.com/">Silver</a>
+    <a href="#" class="future" title="Coming soon" data-future="platinum">Platinum</a>
+    <a href="#" class="future" title="Coming soon" data-future="palladium">Palladium</a>
+    <a href="https://bitcoinprice.corgano.com/">Bitcoin</a>
+    <a href="https://corgano.com/">News &amp; Editorial</a>
+  </nav>
+  <div class="network-strip-tag">Est. 2002 · <a href="https://corgano.com/about" style="color:inherit">About</a></div>
+</div>
+
+<!-- ═══════ TOP BAR ═══════ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">Gold<em>Terminal</em></div>
+    <div class="brand-sub">Corgano · v2.1</div>
+  </div>
+  <nav class="topnav">
+    <a href="#" class="active">Terminal</a>
+    <a href="#">Charts</a>
+    <a href="#">News</a>
+    <a href="#">Analysis</a>
+    <a href="#">Miners</a>
+    <a href="#">Forum</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="status-pill">
+      <span class="status-dot"></span>
+      <span class="status-label">MKT OPEN</span>
+    </div>
+    <div class="status-pill">
+      <span class="status-label">LAST</span>
+      <span class="status-value mono" id="last-updated">14:23:47 EST</span>
+    </div>
+    <div class="status-pill">
+      <span class="status-label">NEXT</span>
+      <span class="countdown-value mono" id="countdown">60s</span>
+    </div>
+    <select class="refresh-select" id="refresh-interval" title="Refresh interval">
+      <option value="30">30s</option>
+      <option value="60" selected>60s</option>
+      <option value="300">5min</option>
+      <option value="0">Off</option>
+    </select>
+    <button class="refresh-btn" id="manual-refresh" title="Refresh now">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.65 2.35A7.95 7.95 0 008 0a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L9 7h7V0l-2.35 2.35z"/></svg>
+      <span>Refresh</span>
+    </button>
+    <button class="icon-btn" id="theme-toggle" title="Toggle theme">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+      </svg>
+    </button>
+    <button class="ai-trigger" onclick="toggleAI()">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.91 8.91 3 11l6.91 2.09L12 20l2.09-6.91L21 11l-6.91-2.09z"/></svg>
+      Ask AI
+    </button>
+  </div>
+</header>
+
+<!-- ═══════ TICKER ═══════ -->
+<div class="ticker-strip">
+  <div class="ticker-track">
+    <span class="ticker-item"><strong>AU</strong>4,687.20 <span class="up">+0.80%</span></span>
+    <a class="ticker-item" href="https://silverprice.corgano.com/"><strong>AG</strong>84.35 <span class="up">+1.16%</span></a>
+    <span class="ticker-item"><strong>PT</strong>1,612.40 <span class="down">−0.32%</span></span>
+    <span class="ticker-item"><strong>PD</strong>1,589.10 <span class="up">+0.43%</span></span>
+    <span class="ticker-item"><strong>RH</strong>5,450 <span class="flat">0.00%</span></span>
+    <span class="ticker-item"><strong>DXY</strong>98.45 <span class="down">−0.18%</span></span>
+    <span class="ticker-item"><strong>US10Y</strong>4.23% <span class="down">−0.05</span></span>
+    <span class="ticker-item"><strong>WTI</strong>80.45 <span class="up">+1.20%</span></span>
+    <a class="ticker-item" href="https://bitcoinprice.corgano.com/"><strong>BTC</strong>84,320 <span class="down">−0.41%</span></a>
+    <span class="ticker-item"><strong>DJIA</strong>39,450 <span class="up">+0.31%</span></span>
+    <span class="ticker-item"><strong>SPX</strong>5,682 <span class="up">+0.47%</span></span>
+    <a class="ticker-item" href="https://silverprice.corgano.com/" title="Gold/Silver ratio — click for silver price"><strong>G/S</strong>55.6 <span class="down">−0.20</span></a>
+    <span class="ticker-item"><strong>HUI</strong>498.30 <span class="up">+2.82%</span></span>
+    <span class="ticker-item"><strong>GDX</strong>52.40 <span class="up">+2.41%</span></span>
+    <!-- duplicate for loop -->
+    <span class="ticker-item"><strong>AU</strong>4,687.20 <span class="up">+0.80%</span></span>
+    <a class="ticker-item" href="https://silverprice.corgano.com/"><strong>AG</strong>84.35 <span class="up">+1.16%</span></a>
+    <span class="ticker-item"><strong>PT</strong>1,612.40 <span class="down">−0.32%</span></span>
+    <span class="ticker-item"><strong>PD</strong>1,589.10 <span class="up">+0.43%</span></span>
+    <span class="ticker-item"><strong>RH</strong>5,450 <span class="flat">0.00%</span></span>
+    <span class="ticker-item"><strong>DXY</strong>98.45 <span class="down">−0.18%</span></span>
+    <span class="ticker-item"><strong>US10Y</strong>4.23% <span class="down">−0.05</span></span>
+    <span class="ticker-item"><strong>WTI</strong>80.45 <span class="up">+1.20%</span></span>
+    <span class="ticker-item"><strong>BTC</strong>84,320 <span class="down">−0.41%</span></span>
+    <span class="ticker-item"><strong>DJIA</strong>39,450 <span class="up">+0.31%</span></span>
+    <span class="ticker-item"><strong>SPX</strong>5,682 <span class="up">+0.47%</span></span>
+    <span class="ticker-item"><strong>G/S</strong>55.6 <span class="down">−0.20</span></span>
+    <span class="ticker-item"><strong>HUI</strong>498.30 <span class="up">+2.82%</span></span>
+    <span class="ticker-item"><strong>GDX</strong>52.40 <span class="up">+2.41%</span></span>
+  </div>
+</div>
+
+<!-- ═══════ BOARD ═══════ -->
+<main class="board">
+
+  <!-- ── ROW 1: HERO ── -->
+
+  <!-- Spot Gold -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>SPOT GOLD</div>
+      <div class="panel-meta">XAU/USD · /oz</div>
+    </div>
+    <div class="spot-hero" id="spot-hero">
+      <div class="spot-symbol">NEW YORK · LIVE</div>
+      <div class="spot-price mono" id="spot-price">4,687.20</div>
+      <div class="spot-change up mono" id="spot-change">
+        <span class="arrow">▲</span>+37.40 &nbsp; +0.80%
+      </div>
+      <div class="bid-ask-strip" id="bid-ask-strip">
+        <span><em>Bid</em> <b>4,687.10</b></span>
+        <span><em>Ask</em> <b>4,687.30</b></span>
+      </div>
+
+      <!-- per-unit conversion strip -->
+      <div class="unit-strip" id="unit-strip">
+        <div class="unit-cell">
+          <div class="unit-label">oz</div>
+          <div class="unit-value">4,687.20</div>
+        </div>
+        <div class="unit-cell">
+          <div class="unit-label">gram</div>
+          <div class="unit-value">150.70</div>
+        </div>
+        <div class="unit-cell">
+          <div class="unit-label">kilo</div>
+          <div class="unit-value">150,699</div>
+        </div>
+        <div class="unit-cell">
+          <div class="unit-label">tola</div>
+          <div class="unit-value">1,757</div>
+        </div>
+      </div>
+
+      <!-- multi-timeframe performance table -->
+      <table class="perf-table" id="perf-table">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th class="num">$ Chg</th>
+            <th class="num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-perf="today"><td>Today</td><td class="num up">+37.40</td><td class="num up">+0.80%</td></tr>
+          <tr data-perf="30d"><td>30 Days</td><td class="num up">+215.40</td><td class="num up">+4.82%</td></tr>
+          <tr data-perf="6m"><td>6 Months</td><td class="num up">+580.20</td><td class="num up">+14.12%</td></tr>
+          <tr data-perf="1y"><td>1 Year</td><td class="num up">+1,402.80</td><td class="num up">+42.71%</td></tr>
+          <tr data-perf="5y"><td>5 Years</td><td class="num up">+3,023.45</td><td class="num up">+181.5%</td></tr>
+          <tr data-perf="20y"><td>20 Years</td><td class="num up">+4,241.20</td><td class="num up">+950.1%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Main chart -->
+  <section class="panel c6">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>XAU/USD · CHART</div>
+      <div class="chart-tabs">
+        <button class="chart-tab" data-tf="1D">1D</button>
+        <button class="chart-tab active" data-tf="1W">1W</button>
+        <button class="chart-tab" data-tf="1M">1M</button>
+        <button class="chart-tab" data-tf="3M">3M</button>
+        <button class="chart-tab" data-tf="1Y">1Y</button>
+        <button class="chart-tab" data-tf="5Y">5Y</button>
+      </div>
+    </div>
+    <div class="chart-canvas" id="main-chart"></div>
+    <div class="chart-legend">
+      <span>Apr 14 – Apr 21</span>
+      <span><span class="up mono">H 4,695.40</span> &nbsp; <span class="down mono">L 4,589.10</span></span>
+    </div>
+    <a href="#" class="chart-expand">View full chart & technical indicators →</a>
+  </section>
+
+  <!-- Other PMs -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>OTHER METALS</div>
+      <div class="panel-meta">USD / oz</div>
+    </div>
+    <div class="panel-body tight">
+      <div class="metals-stack" id="metals-stack">
+        <a class="metal-row linkable" href="https://silverprice.corgano.com/" title="Silver terminal →">
+          <div class="metal-name"><strong>AG</strong>Silver</div>
+          <div class="metal-spark" id="spark-silver"></div>
+          <div class="metal-vals">
+            <div class="metal-price">84.35</div>
+            <div class="metal-chg up">+0.97 (+1.16%)</div>
+          </div>
+        </a>
+        <div class="metal-row">
+          <div class="metal-name"><strong>PT</strong>Platinum</div>
+          <div class="metal-spark" id="spark-plat"></div>
+          <div class="metal-vals">
+            <div class="metal-price">1,612.40</div>
+            <div class="metal-chg down">−5.20 (−0.32%)</div>
+          </div>
+        </div>
+        <div class="metal-row">
+          <div class="metal-name"><strong>PD</strong>Palladium</div>
+          <div class="metal-spark" id="spark-pall"></div>
+          <div class="metal-vals">
+            <div class="metal-price">1,589.10</div>
+            <div class="metal-chg up">+6.80 (+0.43%)</div>
+          </div>
+        </div>
+        <div class="metal-row">
+          <div class="metal-name"><strong>RH</strong>Rhodium</div>
+          <div class="metal-spark" id="spark-rhod"></div>
+          <div class="metal-vals">
+            <div class="metal-price">5,450</div>
+            <div class="metal-chg flat">0.00 (0.00%)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ROW 2: KGI + RATIOS + INDICES + MARKETS ── -->
+
+  <!-- KGI-style attribution -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>GOLD INDEX · KGX</div>
+      <div class="panel-meta">Move attribution</div>
+    </div>
+    <div class="panel-body" id="kgi-body">
+      <div class="kgi-row">
+        <span class="kgi-row-label">Due to USD strength</span>
+        <span class="kgi-row-value up">+$4.20</span>
+      </div>
+      <div class="kgi-row">
+        <span class="kgi-row-label">Due to predominant buyers</span>
+        <span class="kgi-row-value up">+$33.20</span>
+      </div>
+      <div class="kgi-row">
+        <span class="kgi-row-label">Total gold change</span>
+        <span class="kgi-row-value up">+$37.40</span>
+      </div>
+      <div class="kgi-bar" title="USD impact (11%) vs Buyer demand (89%)">
+        <div class="kgi-bar-seg kgi-bar-usd" style="flex-basis:11%"></div>
+        <div class="kgi-bar-seg kgi-bar-buyers" style="flex-basis:89%"></div>
+      </div>
+      <div class="kgi-summary">
+        Roughly 89% of today's move is coming from actual buying pressure rather than dollar weakness — a bullish composition.
+      </div>
+    </div>
+  </section>
+
+  <!-- Ratios -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>RATIOS</div>
+      <div class="panel-meta">Relative value</div>
+    </div>
+    <div class="panel-body tight">
+      <div class="ratio-grid" id="ratios-grid">
+        <div class="ratio-cell">
+          <span class="ratio-label">Gold / Silver</span>
+          <span class="ratio-value">55.60</span>
+          <span class="ratio-chg down">−0.20</span>
+          <a class="ratio-cross" href="https://silverprice.corgano.com/">See silver price</a>
+        </div>
+        <div class="ratio-cell">
+          <span class="ratio-label">Gold / Platinum</span>
+          <span class="ratio-value">2.91</span>
+          <span class="ratio-chg up">+0.03</span>
+        </div>
+        <div class="ratio-cell">
+          <span class="ratio-label">Gold / Palladium</span>
+          <span class="ratio-value">2.95</span>
+          <span class="ratio-chg flat">+0.01</span>
+        </div>
+        <div class="ratio-cell">
+          <span class="ratio-label">Gold / Rhodium</span>
+          <span class="ratio-value">0.86</span>
+          <span class="ratio-chg flat">0.00</span>
+        </div>
+        <div class="ratio-cell">
+          <span class="ratio-label">Gold / Oil</span>
+          <span class="ratio-value">58.26</span>
+          <span class="ratio-chg down">−0.24</span>
+        </div>
+        <div class="ratio-cell">
+          <span class="ratio-label">Gold / BTC</span>
+          <span class="ratio-value">0.0556</span>
+          <span class="ratio-chg up">+0.0007</span>
+          <a class="ratio-cross" href="https://bitcoinprice.corgano.com/">See bitcoin price</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sub-indices -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>MINING INDICES</div>
+      <div class="panel-meta">Equity proxies</div>
+    </div>
+    <div class="panel-body tight">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Index</th><th>Last</th><th>Chg</th><th>Chg%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>XAU</td><td>287.50</td><td class="up">+5.92</td><td class="up">+2.10</td></tr>
+          <tr><td>HUI</td><td>498.30</td><td class="up">+13.66</td><td class="up">+2.82</td></tr>
+          <tr><td>GDX</td><td>52.40</td><td class="up">+1.23</td><td class="up">+2.41</td></tr>
+          <tr><td>GDXJ</td><td>74.20</td><td class="up">+2.23</td><td class="up">+3.10</td></tr>
+          <tr><td>SIL</td><td>46.10</td><td class="up">+1.48</td><td class="up">+3.32</td></tr>
+          <tr><td>TSX·GOLD</td><td>512.80</td><td class="up">+12.52</td><td class="up">+2.50</td></tr>
+          <tr><td>JSE·GOLD</td><td>6,842</td><td class="up">+127</td><td class="up">+1.89</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Correlated markets -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>CORRELATED MARKETS</div>
+      <div class="panel-meta">Watch list</div>
+    </div>
+    <div class="panel-body tight">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Mkt</th><th>Last</th><th>Chg</th><th>Chg%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>DXY</td><td>98.45</td><td class="down">−0.18</td><td class="down">−0.18</td></tr>
+          <tr><td>US 10Y</td><td>4.23%</td><td class="down">−0.05</td><td class="down">−1.17</td></tr>
+          <tr><td>US 2Y</td><td>3.81%</td><td class="down">−0.03</td><td class="down">−0.78</td></tr>
+          <tr><td>WTI</td><td>80.45</td><td class="up">+0.95</td><td class="up">+1.20</td></tr>
+          <tr><td>BTC</td><td>84,320</td><td class="down">−348</td><td class="down">−0.41</td></tr>
+          <tr><td>DJIA</td><td>39,450</td><td class="up">+121</td><td class="up">+0.31</td></tr>
+          <tr><td>S&amp;P 500</td><td>5,682</td><td class="up">+26</td><td class="up">+0.47</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── ROW 3: NEWS + FX TABLE ── -->
+
+  <!-- News -->
+  <section class="panel c6">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>LATEST PM NEWS</div>
+      <div class="panel-meta">Live wire · auto-sorted</div>
+    </div>
+    <div class="news-list" id="news-list">
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">REUTERS</span><span>14:21 EST · 2m ago</span></div>
+          <div class="news-head">Gold extends rally to three-week high as dollar softens before CPI print</div>
+        </div>
+        <span class="news-tag">USD · CPI</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">BLOOMBERG</span><span>14:08 EST · 15m ago</span></div>
+          <div class="news-head">PBoC adds 5 tonnes to gold reserves for 18th straight month, data shows</div>
+        </div>
+        <span class="news-tag">CB</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">KITCO</span><span>13:52 EST · 31m ago</span></div>
+          <div class="news-head">Agnico Eagle moves to consolidate Finland's gold district in C$4B deal</div>
+        </div>
+        <span class="news-tag">M&amp;A</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">FT</span><span>13:40 EST · 43m ago</span></div>
+          <div class="news-head">Swiss refiners report Indian gold demand has doubled ahead of wedding season</div>
+        </div>
+        <span class="news-tag">PHYS</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">WSJ</span><span>13:22 EST · 1h ago</span></div>
+          <div class="news-head">Silver breaks above $84 — highest since March — as industrial demand holds</div>
+        </div>
+        <span class="news-tag">AG</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">MINING.COM</span><span>12:58 EST · 1h ago</span></div>
+          <div class="news-head">Barrick upgrades Mali production guidance despite ongoing tax dispute</div>
+        </div>
+        <span class="news-tag">MINE</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">CNBC</span><span>12:30 EST · 2h ago</span></div>
+          <div class="news-head">JPMorgan lifts year-end gold target to $5,200; cites deficits and de-dollarisation</div>
+        </div>
+        <span class="news-tag">FCAST</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">REUTERS</span><span>11:45 EST · 3h ago</span></div>
+          <div class="news-head">Turkey gold imports spike again; weak lira cited as primary driver</div>
+        </div>
+        <span class="news-tag">EM</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">BLOOMBERG</span><span>11:12 EST · 3h ago</span></div>
+          <div class="news-head">BIS report flags 'rising correlation' between gold and bond vol regimes</div>
+        </div>
+        <span class="news-tag">RSCH</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">MARKETWATCH</span><span>10:48 EST · 4h ago</span></div>
+          <div class="news-head">COMEX gold open interest hits 2026 high as managed money rebuilds longs</div>
+        </div>
+        <span class="news-tag">POS</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">KITCO</span><span>10:15 EST · 4h ago</span></div>
+          <div class="news-head">Newmont Q1 all-in sustaining cost eases to $1,412/oz, beats Street consensus</div>
+        </div>
+        <span class="news-tag">MINE</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">FT</span><span>09:55 EST · 5h ago</span></div>
+          <div class="news-head">Poland quietly becomes the world's most aggressive official-sector buyer</div>
+        </div>
+        <span class="news-tag">CB</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">CBS NEWS</span><span>09:30 EST · 5h ago</span></div>
+          <div class="news-head">Retail demand surges as gold stays near all-time highs — are we in a mania?</div>
+        </div>
+        <span class="news-tag">RETAIL</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">MINEWEB</span><span>09:02 EST · 5h ago</span></div>
+          <div class="news-head">Zijin Mining to acquire 60% stake in Kyrgyzstan gold project for $487M</div>
+        </div>
+        <span class="news-tag">M&amp;A</span>
+      </div>
+      <div class="news-item">
+        <div>
+          <div class="news-meta"><span class="news-source">REUTERS</span><span>08:21 EST · 6h ago</span></div>
+          <div class="news-head">ETF inflows: GLD adds fourth straight week of gains, first since late 2024</div>
+        </div>
+        <span class="news-tag">ETF</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FX table: gold in all currencies -->
+  <section class="panel c6">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>GOLD IN GLOBAL CURRENCIES</div>
+      <div class="panel-meta">mid-market · per troy oz</div>
+    </div>
+    <div class="panel-body tight">
+      <table class="dt">
+        <thead>
+          <tr>
+            <th>Currency</th>
+            <th class="num">FX Rate</th>
+            <th class="num">Gold Price</th>
+            <th class="num">Chg</th>
+            <th class="num">Chg%</th>
+          </tr>
+        </thead>
+        <tbody id="fx-tbody">
+          <tr><td class="sym">USD</td><td class="num">—</td><td class="num">4,687.20</td><td class="num up">+37.40</td><td class="num up">+0.80%</td></tr>
+          <tr><td class="sym">EUR</td><td class="num">0.9285</td><td class="num">4,352.20</td><td class="num up">+28.40</td><td class="num up">+0.66%</td></tr>
+          <tr><td class="sym">GBP</td><td class="num">0.7812</td><td class="num">3,661.65</td><td class="num up">+22.10</td><td class="num up">+0.61%</td></tr>
+          <tr><td class="sym">JPY</td><td class="num">151.42</td><td class="num">709,729</td><td class="num up">+6,430</td><td class="num up">+0.91%</td></tr>
+          <tr><td class="sym">CAD</td><td class="num">1.3845</td><td class="num">6,489.45</td><td class="num up">+58.10</td><td class="num up">+0.91%</td></tr>
+          <tr><td class="sym">AUD</td><td class="num">1.5612</td><td class="num">7,317.50</td><td class="num up">+72.40</td><td class="num up">+1.00%</td></tr>
+          <tr><td class="sym">CHF</td><td class="num">0.8542</td><td class="num">4,003.85</td><td class="num up">+18.90</td><td class="num up">+0.47%</td></tr>
+          <tr><td class="sym">CNY</td><td class="num">7.2045</td><td class="num">33,769.10</td><td class="num up">+268</td><td class="num up">+0.80%</td></tr>
+          <tr><td class="sym">INR</td><td class="num">84.23</td><td class="num">394,807</td><td class="num up">+3,221</td><td class="num up">+0.82%</td></tr>
+          <tr><td class="sym">MXN</td><td class="num">20.42</td><td class="num">95,712</td><td class="num up">+812</td><td class="num up">+0.86%</td></tr>
+          <tr><td class="sym">BRL</td><td class="num">5.68</td><td class="num">26,623</td><td class="num up">+244</td><td class="num up">+0.92%</td></tr>
+          <tr><td class="sym">HKD</td><td class="num">7.8012</td><td class="num">36,565</td><td class="num up">+290</td><td class="num up">+0.80%</td></tr>
+          <tr><td class="sym">SGD</td><td class="num">1.3421</td><td class="num">6,290.90</td><td class="num up">+48.20</td><td class="num up">+0.77%</td></tr>
+          <tr><td class="sym">ZAR</td><td class="num">18.92</td><td class="num">88,682</td><td class="num up">+892</td><td class="num up">+1.02%</td></tr>
+          <tr><td class="sym">RUB</td><td class="num">93.14</td><td class="num">436,557</td><td class="num up">+4,120</td><td class="num up">+0.95%</td></tr>
+          <tr><td class="sym">TRY</td><td class="num">38.41</td><td class="num">180,034</td><td class="num up">+2,181</td><td class="num up">+1.23%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── ROW 4: MINERS + COMMENTARY ── -->
+
+  <!-- Top gold miners -->
+  <section class="panel c4">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>TOP GOLD MINERS</div>
+      <div class="panel-meta">By market cap · USD</div>
+    </div>
+    <div class="panel-body tight">
+      <table class="dt">
+        <thead>
+          <tr><th>Sym</th><th>Name</th><th class="num">Last</th><th class="num">Chg%</th></tr>
+        </thead>
+        <tbody id="miners-gold-tbody">
+          <tr><td class="sym">NEM</td><td class="name">Newmont</td><td class="num">68.45</td><td class="num up">+3.22</td></tr>
+          <tr><td class="sym">GOLD</td><td class="name">Barrick</td><td class="num">24.18</td><td class="num up">+2.85</td></tr>
+          <tr><td class="sym">AEM</td><td class="name">Agnico Eagle</td><td class="num">134.20</td><td class="num up">+2.40</td></tr>
+          <tr><td class="sym">FNV</td><td class="name">Franco-Nevada</td><td class="num">162.80</td><td class="num up">+1.92</td></tr>
+          <tr><td class="sym">WPM</td><td class="name">Wheaton Prec</td><td class="num">78.40</td><td class="num up">+2.51</td></tr>
+          <tr><td class="sym">KGC</td><td class="name">Kinross</td><td class="num">15.62</td><td class="num up">+3.41</td></tr>
+          <tr><td class="sym">AU</td><td class="name">AngloGold</td><td class="num">42.18</td><td class="num up">+2.88</td></tr>
+          <tr><td class="sym">GFI</td><td class="name">Gold Fields</td><td class="num">28.40</td><td class="num up">+2.12</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Top silver miners -->
+  <section class="panel c4">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>TOP SILVER MINERS</div>
+      <div class="panel-meta">By market cap · USD</div>
+    </div>
+    <div class="panel-body tight">
+      <table class="dt">
+        <thead>
+          <tr><th>Sym</th><th>Name</th><th class="num">Last</th><th class="num">Chg%</th></tr>
+        </thead>
+        <tbody id="miners-silver-tbody">
+          <tr><td class="sym">PAAS</td><td class="name">Pan American</td><td class="num">28.45</td><td class="num up">+4.12</td></tr>
+          <tr><td class="sym">AG</td><td class="name">First Majestic</td><td class="num">9.82</td><td class="num up">+5.22</td></tr>
+          <tr><td class="sym">HL</td><td class="name">Hecla Mining</td><td class="num">7.45</td><td class="num up">+3.88</td></tr>
+          <tr><td class="sym">SVM</td><td class="name">Silvercorp</td><td class="num">5.62</td><td class="num up">+4.45</td></tr>
+          <tr><td class="sym">FSM</td><td class="name">Fortuna Silver</td><td class="num">6.18</td><td class="num up">+3.72</td></tr>
+          <tr><td class="sym">EXK</td><td class="name">Endeavour</td><td class="num">4.20</td><td class="num up">+4.78</td></tr>
+          <tr><td class="sym">MAG</td><td class="name">MAG Silver</td><td class="num">18.45</td><td class="num up">+3.41</td></tr>
+          <tr><td class="sym">SSRM</td><td class="name">SSR Mining</td><td class="num">11.22</td><td class="num up">+2.94</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Commentary -->
+  <section class="panel c4">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>CONTRIBUTED ANALYSIS</div>
+      <div class="panel-meta">Commentator's Corner</div>
+    </div>
+    <div class="panel-body tight" id="commentary-list">
+      <div class="cmt-item">
+        <div class="cmt-title">The case for $5,000 gold, and what central banks aren't saying</div>
+        <div class="cmt-byline"><span class="author">M. Devereux</span> · 8 min · 2h ago</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Real yields drift lower as Fed minutes leave September wide open</div>
+        <div class="cmt-byline"><span class="author">B. Lundin</span> · 4 min · 4h ago</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Technical signals in gold and silver: what's changed this week</div>
+        <div class="cmt-byline"><span class="author">J. Handwerger</span> · 6 min · 5h ago</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">The gold-silver ratio is screaming — here's how traders are playing it</div>
+        <div class="cmt-byline"><span class="author">G. Wagner</span> · 5 min · 7h ago</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">BRICS+ reserve diversification: measurable trend, not a narrative</div>
+        <div class="cmt-byline"><span class="author">P. Radomski</span> · 9 min · 9h ago</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Why Poland quietly became the world's most aggressive official buyer</div>
+        <div class="cmt-byline"><span class="author">D. Levenstein</span> · 7 min · 12h ago</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Mint premiums falling fast — what it means for physical stackers</div>
+        <div class="cmt-byline"><span class="author">N. Charnock</span> · 4 min · 1d ago</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ROW 5: FIX + LEASE + FUTURES + ANALYSES ── -->
+
+  <!-- London Fix -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>LONDON FIX</div>
+      <div class="panel-meta">LBMA · USD/oz</div>
+    </div>
+    <div class="panel-body">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Date</th><th>AM</th><th>PM</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Apr 21</td><td>4,671.00</td><td>4,683.50</td></tr>
+          <tr><td>Apr 20</td><td>4,645.00</td><td>4,649.80</td></tr>
+          <tr><td>Apr 19</td><td>4,612.50</td><td>4,620.00</td></tr>
+          <tr><td>Apr 18</td><td>4,598.00</td><td>4,605.25</td></tr>
+          <tr><td>Apr 17</td><td>4,572.75</td><td>4,588.00</td></tr>
+        </tbody>
+      </table>
+      <a href="#" style="display:block; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--link); margin-top:8px; text-align:right;">Historical fixings →</a>
+    </div>
+  </section>
+
+  <!-- Lease Rates -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>LEASE RATES</div>
+      <div class="panel-meta">Gold · % p.a.</div>
+    </div>
+    <div class="panel-body">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Term</th><th>Rate</th><th>Δ</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1 month</td><td>−0.1238</td><td class="up">+0.0110</td></tr>
+          <tr><td>2 month</td><td>−0.0769</td><td class="up">+0.0342</td></tr>
+          <tr><td>3 month</td><td>−0.0672</td><td class="up">+0.0261</td></tr>
+          <tr><td>6 month</td><td>+0.0238</td><td class="up">+0.0262</td></tr>
+          <tr><td>1 year</td><td>+0.2939</td><td class="up">+0.0241</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Futures -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>COMEX FUTURES</div>
+      <div class="panel-meta">GC · USD/oz</div>
+    </div>
+    <div class="panel-body">
+      <table class="mini-table">
+        <thead>
+          <tr><th>Contract</th><th>Last</th><th>Chg%</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Apr 2026</td><td>4,692.40</td><td class="up">+0.82</td></tr>
+          <tr><td>Jun 2026</td><td>4,718.80</td><td class="up">+0.85</td></tr>
+          <tr><td>Aug 2026</td><td>4,742.10</td><td class="up">+0.87</td></tr>
+          <tr><td>Dec 2026</td><td>4,801.50</td><td class="up">+0.91</td></tr>
+          <tr><td>Jun 2027</td><td>4,892.40</td><td class="up">+0.94</td></tr>
+        </tbody>
+      </table>
+      <div style="display:flex; justify-content:space-between; margin-top:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim);">
+        <span>Open Int: 487,221</span>
+        <span>Vol: 247,829</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured miners + sponsored -->
+  <section class="panel c3">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>FEATURED MINERS</div>
+      <div class="panel-meta">Sponsored · info req</div>
+    </div>
+    <div class="panel-body tight">
+      <div class="featured-list">
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Yellowhead Mining</div>
+          <div class="featured-ticker">YMI.V</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Gold Canyon Resources</div>
+          <div class="featured-ticker">GCU.V</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Aurizon Mines</div>
+          <div class="featured-ticker">ARZ.TO</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Argonaut Gold</div>
+          <div class="featured-ticker">AR.TO</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Orex Minerals</div>
+          <div class="featured-ticker">REX.V</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Silvermex Resources</div>
+          <div class="featured-ticker">SMR.V</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Mansfield Minerals</div>
+          <div class="featured-ticker">MDR.V</div>
+        </div>
+        <div class="featured-row">
+          <div class="featured-check"></div>
+          <div class="featured-name">Great Panther Silver</div>
+          <div class="featured-ticker">GPR.TO</div>
+        </div>
+      </div>
+      <div style="padding: 8px 10px; border-top: 1px solid var(--border-soft);">
+        <button style="width: 100%; padding: 6px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 2px; cursor: pointer;">Get Information</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── ROW 6: TECHNICAL ANALYSES + PRESS ── -->
+
+  <!-- Technical analyses list -->
+  <section class="panel c6">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>TECHNICAL & FUNDAMENTAL ANALYSES</div>
+      <div class="panel-meta">Updated daily</div>
+    </div>
+    <div class="panel-body tight">
+      <div class="cmt-item">
+        <div class="cmt-title">Standard Bank — Weekly Precious Metals Report</div>
+        <div class="cmt-byline"><span class="author">Standard Bank Research</span> · 08:55 · Apr 21</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Gold & Silver Marketwatch — morning brief</div>
+        <div class="cmt-byline"><span class="author">Scotia Mocatta</span> · 08:47 · Apr 21</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">COT Report analysis: managed money rebuilds gold longs</div>
+        <div class="cmt-byline"><span class="author">CFTC Commentary</span> · 08:41 · Apr 21</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Standard Bank — Daily Report (Apr 21)</div>
+        <div class="cmt-byline"><span class="author">Standard Bank Research</span> · 08:49 · Apr 21</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">TD Securities — Commodities Morning Note</div>
+        <div class="cmt-byline"><span class="author">TD Securities</span> · 08:12 · Apr 21</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">ANZ Commodities Daily — focus on Asian physical demand</div>
+        <div class="cmt-byline"><span class="author">ANZ Research</span> · 07:58 · Apr 21</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Press releases -->
+  <section class="panel c6">
+    <div class="panel-header">
+      <div class="panel-title"><span class="gold-dot"></span>PRESS RELEASES</div>
+      <div class="panel-meta">Industry wire</div>
+    </div>
+    <div class="panel-body tight">
+      <div class="cmt-item">
+        <div class="cmt-title">Tectonic/Comstock Samples 275 ppb Au in White Gold Yukon</div>
+        <div class="cmt-byline">Tectonic Metals · Apr 21 · 05:44 PM</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">BCGold Corp. Announces Trench Assays Up To 979 g/t Gold at Engineer</div>
+        <div class="cmt-byline">BCGold Corp · Apr 21 · 05:38 PM</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Alexis Minerals Reports Financial Results for Quarter Ended June 30</div>
+        <div class="cmt-byline">Alexis Minerals · Apr 21 · 05:36 PM</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Southern Silver Closes Second Tranche of Private Placement</div>
+        <div class="cmt-byline">Southern Silver · Apr 21 · 05:27 PM</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Kinross Announces US$1 Million for Alaskan Mining Engineering Students</div>
+        <div class="cmt-byline">Kinross Gold · Apr 21 · 05:22 PM</div>
+      </div>
+      <div class="cmt-item">
+        <div class="cmt-title">Renaissance Gold Grants Options to Directors and Officers</div>
+        <div class="cmt-byline">Renaissance Gold · Apr 21 · 04:47 PM</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════ FOOTER ═══════ -->
+<!-- ═══════ MEGA FOOTER ═══════ -->
+<footer class="mega-footer">
+  <div class="mf-inner">
+
+    <!-- ─── BRAND + SISTER SITE NAVIGATION ─── -->
+    <div class="mf-brand">
+      <div>
+        <div class="mf-brand-line"><strong>Corgano</strong> · Gold Terminal</div>
+        <div class="mf-brand-tag">The definitive view of precious metals · Est. 2002</div>
+      </div>
+      <nav class="mf-network" aria-label="Corgano Network">
+        <a href="/" class="current">Gold</a>
+        <a href="https://silverprice.corgano.com/">Silver</a>
+        <a href="#">Platinum</a>
+        <a href="#">Palladium</a>
+        <a href="https://bitcoinprice.corgano.com/">Bitcoin</a>
+        <a href="https://corgano.com/">News</a>
+      </nav>
+    </div>
+
+    <!-- ─── MARKETS & CHARTS ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Markets &amp; Charts
+        <span class="mf-section-meta">Live data · historical · reference</span>
+      </div>
+      <div class="mf-grid mf-g5">
+        <div class="mf-col">
+          <h5>Precious Metals</h5>
+          <ul>
+            <li><a href="#">Gold Price</a></li>
+            <li><a href="#">Silver Price</a></li>
+            <li><a href="#">Platinum Price</a></li>
+            <li><a href="#">Palladium Price</a></li>
+            <li><a href="#">Rhodium Price</a></li>
+            <li><a href="#">Gold/Silver Ratio</a></li>
+            <li><a href="#">All Metals Overview</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>By Weight Unit</h5>
+          <ul>
+            <li><a href="#">Gold Price per Ounce</a></li>
+            <li><a href="#">Gold Price per Gram</a></li>
+            <li><a href="#">Gold Price per Kilo</a></li>
+            <li><a href="#">Gold Price per Tola</a></li>
+            <li><a href="#">Gold Price per Grain</a></li>
+            <li><a href="#">Gold Price per Pennyweight</a></li>
+            <li><a href="#">Unit Conversion Table</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>By Karat</h5>
+          <ul>
+            <li><a href="#">24K Gold Price</a></li>
+            <li><a href="#">22K Gold Price</a></li>
+            <li><a href="#">21K Gold Price</a></li>
+            <li><a href="#">18K Gold Price</a></li>
+            <li><a href="#">14K Gold Price</a></li>
+            <li><a href="#">10K Gold Price</a></li>
+            <li><a href="#">9K Gold Price</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Chart Types</h5>
+          <ul>
+            <li><a href="#">Live Gold Chart</a></li>
+            <li><a href="#">1-Day Chart</a></li>
+            <li><a href="#">30-Day Chart</a></li>
+            <li><a href="#">1-Year Chart</a></li>
+            <li><a href="#">5-Year Chart</a></li>
+            <li><a href="#">25-Year Chart</a></li>
+            <li><a href="#">50-Year Chart</a></li>
+            <li><a href="#">All-Time History</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Data &amp; Comparisons</h5>
+          <ul>
+            <li><a href="#">Gold vs Inflation (CPI)</a></li>
+            <li><a href="#">Gold vs S&amp;P 500</a></li>
+            <li><a href="#">Gold vs US Dollar (DXY)</a></li>
+            <li><a href="#">Gold vs Bitcoin</a></li>
+            <li><a href="#">Gold vs 10Y Treasury</a></li>
+            <li><a href="#">Annual % Change Table</a></li>
+            <li><a href="#">London Fix Archive</a></li>
+            <li><a href="#">COMEX Futures Curve</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── JEWELER TOOLS & CALCULATORS ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Tools &amp; Calculators
+        <span class="mf-section-meta">For jewelers, traders, and investors</span>
+      </div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>Jeweler &amp; Scrap</h5>
+          <ul>
+            <li><a href="#" class="q">How much is my gold jewelry worth?</a></li>
+            <li><a href="#" class="q">How much is my scrap gold worth?</a></li>
+            <li><a href="#" class="q">What karat is my gold jewelry?</a></li>
+            <li><a href="#" class="q">How much is my coin worth?</a></li>
+            <li><a href="#">Melt Value Calculator</a></li>
+            <li><a href="#">Scrap Gold Calculator</a></li>
+            <li><a href="#">Karat Converter</a></li>
+            <li><a href="#">Coin Melt Calculator</a></li>
+            <li><a href="#">Multi-Item Bulk Calculator</a></li>
+            <li><a href="#">Refiner Settlement Calculator</a></li>
+            <li><a href="#">Gold Party Calculator</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Conversions</h5>
+          <ul>
+            <li><a href="#" class="q">How many grams in a troy ounce?</a></li>
+            <li><a href="#" class="q">Convert ounces, grams and kilos</a></li>
+            <li><a href="#">Troy Ounce ↔ Gram</a></li>
+            <li><a href="#">Troy Ounce ↔ Kilogram</a></li>
+            <li><a href="#">Gram ↔ Pennyweight</a></li>
+            <li><a href="#">Grain ↔ Gram</a></li>
+            <li><a href="#">Tola ↔ Troy Ounce</a></li>
+            <li><a href="#">Unit Conversion Reference</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Investor Tools</h5>
+          <ul>
+            <li><a href="#" class="q">Should I buy gold now?</a></li>
+            <li><a href="#" class="q">How much gold should I own?</a></li>
+            <li><a href="#" class="q">What's my portfolio worth?</a></li>
+            <li><a href="#">Portfolio Tracker</a></li>
+            <li><a href="#">Allocation Calculator</a></li>
+            <li><a href="#">Dollar-Cost Averaging Simulator</a></li>
+            <li><a href="#">Gold IRA Calculator</a></li>
+            <li><a href="#">Historical Price Lookup</a></li>
+            <li><a href="#">Premium / Spread Tracker</a></li>
+            <li><a href="#">Inflation-Adjusted Price</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Market Data Tools</h5>
+          <ul>
+            <li><a href="#">Central Bank Gold Tracker</a></li>
+            <li><a href="#">COT Positioning Report</a></li>
+            <li><a href="#">GLD ETF Flows</a></li>
+            <li><a href="#">Gold/Silver Ratio Calculator</a></li>
+            <li><a href="#">Mint Premium Tracker</a></li>
+            <li><a href="#">Price Alerts (email/SMS)</a></li>
+            <li><a href="#">RSS Feeds</a></li>
+            <li><a href="#">Widgets for Your Website</a></li>
+            <li><a href="#">API Access</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BUY PRECIOUS METALS (commerce/affiliate) ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Buy &amp; Sell Precious Metals
+        <span class="mf-section-meta">Dealers, bullion products, regional guides</span>
+      </div>
+      <div class="mf-grid mf-g6">
+        <div class="mf-col">
+          <h5>Buy Gold · USA</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers USA</a></li>
+            <li><a href="#">USA Gold Bars</a></li>
+            <li><a href="#">USA Small Gold Bars</a></li>
+            <li><a href="#">USA Gold Coins</a></li>
+            <li><a href="#">USA Small Gold Coins</a></li>
+            <li><a href="#">Gold IRA Providers</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Gold · Canada</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers Canada</a></li>
+            <li><a href="#">Canadian Gold Bars</a></li>
+            <li><a href="#">Canadian Small Gold Bars</a></li>
+            <li><a href="#">Canadian Gold Coins</a></li>
+            <li><a href="#">Canadian Small Gold Coins</a></li>
+            <li><a href="#">Royal Canadian Mint</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Gold · UK</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers UK</a></li>
+            <li><a href="#">UK Gold Bars</a></li>
+            <li><a href="#">UK Small Gold Bars</a></li>
+            <li><a href="#">UK Gold Coins</a></li>
+            <li><a href="#">UK Small Gold Coins</a></li>
+            <li><a href="#">Royal Mint</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Gold · Australia</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers Australia</a></li>
+            <li><a href="#">Australian Gold Bars</a></li>
+            <li><a href="#">Australian Small Gold Bars</a></li>
+            <li><a href="#">Australian Gold Coins</a></li>
+            <li><a href="#">Australian Small Gold Coins</a></li>
+            <li><a href="#">Perth Mint</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Silver</h5>
+          <ul>
+            <li><a href="#">Best Silver Dealers USA</a></li>
+            <li><a href="#">Best Silver Dealers UK</a></li>
+            <li><a href="#">Best Silver Dealers Canada</a></li>
+            <li><a href="#">Silver Bars</a></li>
+            <li><a href="#">Silver Coins</a></li>
+            <li><a href="#">Pre-1965 Junk Silver</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Sell Precious Metals</h5>
+          <ul>
+            <li><a href="#">Sell Gold Jewelry</a></li>
+            <li><a href="#">Sell Scrap Gold</a></li>
+            <li><a href="#">Sell Gold Coins</a></li>
+            <li><a href="#">Sell Gold Bars</a></li>
+            <li><a href="#">Sell Silver</a></li>
+            <li><a href="#">Refiner Directory</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BULLION COINS & BARS BY PRODUCT ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Bullion Coins &amp; Bars
+        <span class="mf-section-meta">By product, mint, weight</span>
+      </div>
+      <div class="mf-grid mf-g5">
+        <div class="mf-col">
+          <h5>Gold Coins · Sovereign</h5>
+          <ul>
+            <li><a href="#">American Gold Eagle</a></li>
+            <li><a href="#">American Gold Buffalo</a></li>
+            <li><a href="#">Canadian Maple Leaf</a></li>
+            <li><a href="#">South African Krugerrand</a></li>
+            <li><a href="#">Austrian Philharmonic</a></li>
+            <li><a href="#">British Britannia</a></li>
+            <li><a href="#">British Sovereign</a></li>
+            <li><a href="#">Chinese Panda</a></li>
+            <li><a href="#">Australian Kangaroo</a></li>
+            <li><a href="#">Swiss Vreneli</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Silver Coins</h5>
+          <ul>
+            <li><a href="#">American Silver Eagle</a></li>
+            <li><a href="#">Canadian Silver Maple</a></li>
+            <li><a href="#">Austrian Silver Philharmonic</a></li>
+            <li><a href="#">British Silver Britannia</a></li>
+            <li><a href="#">Australian Silver Kangaroo</a></li>
+            <li><a href="#">Mexican Libertad</a></li>
+            <li><a href="#">Chinese Silver Panda</a></li>
+            <li><a href="#">Morgan / Peace Dollars</a></li>
+            <li><a href="#">Junk Silver (Pre-1965)</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Gold Bars by Weight</h5>
+          <ul>
+            <li><a href="#">1 Gram Gold Bars</a></li>
+            <li><a href="#">5 Gram Gold Bars</a></li>
+            <li><a href="#">10 Gram Gold Bars</a></li>
+            <li><a href="#">1 oz Gold Bars</a></li>
+            <li><a href="#">50 Gram Gold Bars</a></li>
+            <li><a href="#">100 Gram Gold Bars</a></li>
+            <li><a href="#">10 oz Gold Bars</a></li>
+            <li><a href="#">1 Kilogram Gold Bars</a></li>
+            <li><a href="#">LBMA Good Delivery (400 oz)</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Silver Bars by Weight</h5>
+          <ul>
+            <li><a href="#">1 oz Silver Bars</a></li>
+            <li><a href="#">5 oz Silver Bars</a></li>
+            <li><a href="#">10 oz Silver Bars</a></li>
+            <li><a href="#">100 oz Silver Bars</a></li>
+            <li><a href="#">1 Kilo Silver Bars</a></li>
+            <li><a href="#">1,000 oz COMEX Bars</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Refiners &amp; Mints</h5>
+          <ul>
+            <li><a href="#">US Mint</a></li>
+            <li><a href="#">Royal Canadian Mint</a></li>
+            <li><a href="#">Royal Mint (UK)</a></li>
+            <li><a href="#">Perth Mint</a></li>
+            <li><a href="#">PAMP Suisse</a></li>
+            <li><a href="#">Credit Suisse</a></li>
+            <li><a href="#">Valcambi</a></li>
+            <li><a href="#">Argor-Heraeus</a></li>
+            <li><a href="#">Metalor</a></li>
+            <li><a href="#">Johnson Matthey</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── GOLD PRICE BY COUNTRY (the SEO monster) ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Gold Price by Country
+        <span class="mf-section-meta">Local currency · live conversion · regional context</span>
+      </div>
+      <div class="mf-grid mf-g5">
+        <div class="mf-region">
+          <h6>Americas</h6>
+          <ul>
+            <li><a href="#">Gold Price USA</a></li>
+            <li><a href="#">Gold Price Canada</a></li>
+            <li><a href="#">Gold Price Mexico</a></li>
+            <li><a href="#">Gold Price Brazil</a></li>
+            <li><a href="#">Gold Price Argentina</a></li>
+            <li><a href="#">Gold Price Chile</a></li>
+            <li><a href="#">Gold Price Colombia</a></li>
+            <li><a href="#">Gold Price Peru</a></li>
+            <li><a href="#">Gold Price Uruguay</a></li>
+            <li><a href="#">Gold Price Dominican Republic</a></li>
+            <li><a href="#">Gold Price Costa Rica</a></li>
+            <li><a href="#">Gold Price Venezuela</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Europe</h6>
+          <ul>
+            <li><a href="#">Gold Price United Kingdom</a></li>
+            <li><a href="#">Gold Price Germany</a></li>
+            <li><a href="#">Gold Price France</a></li>
+            <li><a href="#">Gold Price Italy</a></li>
+            <li><a href="#">Gold Price Spain</a></li>
+            <li><a href="#">Gold Price Netherlands</a></li>
+            <li><a href="#">Gold Price Switzerland</a></li>
+            <li><a href="#">Gold Price Sweden</a></li>
+            <li><a href="#">Gold Price Norway</a></li>
+            <li><a href="#">Gold Price Denmark</a></li>
+            <li><a href="#">Gold Price Poland</a></li>
+            <li><a href="#">Gold Price Austria</a></li>
+            <li><a href="#">Gold Price Portugal</a></li>
+            <li><a href="#">Gold Price Ireland</a></li>
+            <li><a href="#">Gold Price Romania</a></li>
+            <li><a href="#">Gold Price Serbia</a></li>
+            <li><a href="#">Gold Price Ukraine</a></li>
+            <li><a href="#">Gold Price Russia</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Middle East</h6>
+          <ul>
+            <li><a href="#">Gold Price UAE</a></li>
+            <li><a href="#">Gold Price Saudi Arabia</a></li>
+            <li><a href="#">Gold Price Qatar</a></li>
+            <li><a href="#">Gold Price Kuwait</a></li>
+            <li><a href="#">Gold Price Bahrain</a></li>
+            <li><a href="#">Gold Price Oman</a></li>
+            <li><a href="#">Gold Price Jordan</a></li>
+            <li><a href="#">Gold Price Lebanon</a></li>
+            <li><a href="#">Gold Price Israel</a></li>
+            <li><a href="#">Gold Price Turkey</a></li>
+            <li><a href="#">Gold Price Iran</a></li>
+            <li><a href="#">Gold Price Iraq</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Asia &amp; Oceania</h6>
+          <ul>
+            <li><a href="#">Gold Price China</a></li>
+            <li><a href="#">Gold Price Hong Kong</a></li>
+            <li><a href="#">Gold Price Taiwan</a></li>
+            <li><a href="#">Gold Price Japan</a></li>
+            <li><a href="#">Gold Price South Korea</a></li>
+            <li><a href="#">Gold Price India</a></li>
+            <li><a href="#">Gold Price Pakistan</a></li>
+            <li><a href="#">Gold Price Bangladesh</a></li>
+            <li><a href="#">Gold Price Sri Lanka</a></li>
+            <li><a href="#">Gold Price Singapore</a></li>
+            <li><a href="#">Gold Price Malaysia</a></li>
+            <li><a href="#">Gold Price Thailand</a></li>
+            <li><a href="#">Gold Price Vietnam</a></li>
+            <li><a href="#">Gold Price Philippines</a></li>
+            <li><a href="#">Gold Price Indonesia</a></li>
+            <li><a href="#">Gold Price Australia</a></li>
+            <li><a href="#">Gold Price New Zealand</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Africa</h6>
+          <ul>
+            <li><a href="#">Gold Price Egypt</a></li>
+            <li><a href="#">Gold Price South Africa</a></li>
+            <li><a href="#">Gold Price Morocco</a></li>
+            <li><a href="#">Gold Price Tunisia</a></li>
+            <li><a href="#">Gold Price Libya</a></li>
+            <li><a href="#">Gold Price Nigeria</a></li>
+            <li><a href="#">Gold Price Kenya</a></li>
+            <li><a href="#">Gold Price Ghana</a></li>
+            <li><a href="#">Gold Price Ethiopia</a></li>
+            <li><a href="#">Gold Price Algeria</a></li>
+            <li><a href="#">Gold Price Tanzania</a></li>
+            <li><a href="#">Gold Price Uganda</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── GUIDES & EDUCATION ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Guides &amp; Education
+        <span class="mf-section-meta">Evergreen reference content</span>
+      </div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>Beginner's Guides</h5>
+          <ul>
+            <li><a href="#">How to Buy Gold (Beginner's Guide)</a></li>
+            <li><a href="#">Gold vs Silver — Which to Buy?</a></li>
+            <li><a href="#">Physical Gold vs ETF vs Mining Stocks</a></li>
+            <li><a href="#">How Much Gold Should You Own?</a></li>
+            <li><a href="#">Where to Buy Physical Gold Safely</a></li>
+            <li><a href="#">Common Bullion Scams to Avoid</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Karat, Purity &amp; Testing</h5>
+          <ul>
+            <li><a href="#">Understanding Karats (10K–24K)</a></li>
+            <li><a href="#">Gold-Filled vs Plated vs Solid</a></li>
+            <li><a href="#">Sterling Silver vs Silver-Plated</a></li>
+            <li><a href="#">How to Test Gold at Home</a></li>
+            <li><a href="#">Acid Tests vs Electronic Testers</a></li>
+            <li><a href="#">Spotting Counterfeit Coins</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Storage, Tax &amp; Insurance</h5>
+          <ul>
+            <li><a href="#">Storing Precious Metals at Home</a></li>
+            <li><a href="#">Bank Safe Deposit Boxes</a></li>
+            <li><a href="#">Third-Party Vault Storage</a></li>
+            <li><a href="#">Insurance for Precious Metals</a></li>
+            <li><a href="#">Tax Rules on Gold Sales (USA)</a></li>
+            <li><a href="#">Gold IRA: Rules &amp; Custodians</a></li>
+            <li><a href="#">Inheritance &amp; Estate Planning</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Market Concepts</h5>
+          <ul>
+            <li><a href="#">What Is the London Fix?</a></li>
+            <li><a href="#">Understanding Gold/Silver Ratio</a></li>
+            <li><a href="#">Spot Price vs Dealer Premium</a></li>
+            <li><a href="#">Why Central Banks Buy Gold</a></li>
+            <li><a href="#">Gold as Inflation Hedge — Does It Work?</a></li>
+            <li><a href="#">COMEX &amp; Futures Markets Explained</a></li>
+            <li><a href="#">Real Yields and Gold — The Link</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── NEWS & MINING ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        News, Analysis &amp; Mining
+        <span class="mf-section-meta">Daily updates · weekly deep-dives · archive</span>
+      </div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>News Categories</h5>
+          <ul>
+            <li><a href="#">Latest News</a></li>
+            <li><a href="#">Morning Brief (Daily)</a></li>
+            <li><a href="#">Weekly Analysis</a></li>
+            <li><a href="#">Fed &amp; Macro</a></li>
+            <li><a href="#">Central Bank Coverage</a></li>
+            <li><a href="#">Geopolitics &amp; Gold</a></li>
+            <li><a href="#">Physical Demand (Asia)</a></li>
+            <li><a href="#">Technical Analysis</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Mining Stocks</h5>
+          <ul>
+            <li><a href="#">Top Gold Miners (by Market Cap)</a></li>
+            <li><a href="#">Top Silver Miners</a></li>
+            <li><a href="#">Royalty Companies</a></li>
+            <li><a href="#">Junior Explorers</a></li>
+            <li><a href="#">Gold Mining ETFs (GDX, GDXJ)</a></li>
+            <li><a href="#">Silver Mining ETFs (SIL, SILJ)</a></li>
+            <li><a href="#">Miner Performance Dashboard</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Research &amp; Reports</h5>
+          <ul>
+            <li><a href="#">Analyst Commentary Archive</a></li>
+            <li><a href="#">Standard Bank Weekly Report</a></li>
+            <li><a href="#">Scotia Mocatta Morning Notes</a></li>
+            <li><a href="#">Silver Institute Annual Survey</a></li>
+            <li><a href="#">World Gold Council Reports</a></li>
+            <li><a href="#">BIS Reports on Gold</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Cryptocurrency</h5>
+          <ul>
+            <li><a href="https://bitcoinprice.corgano.com/">Bitcoin Price</a></li>
+            <li><a href="#">Ethereum Price</a></li>
+            <li><a href="#">Solana Price</a></li>
+            <li><a href="#">Cardano Price</a></li>
+            <li><a href="#">Polkadot Price</a></li>
+            <li><a href="#">XRP Price</a></li>
+            <li><a href="#">Gold-Backed Tokens (PAXG, XAUT)</a></li>
+            <li><a href="#">View All Cryptos →</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── CORPORATE / APPS / LEGAL ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">Corgano Network &amp; Corporate</div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>Sister Sites</h5>
+          <ul>
+            <li><a href="/">Gold Price Terminal</a></li>
+            <li><a href="https://silverprice.corgano.com/">Silver Price</a></li>
+            <li><a href="#">Platinum Price</a></li>
+            <li><a href="#">Palladium Price</a></li>
+            <li><a href="https://bitcoinprice.corgano.com/">Bitcoin Price</a></li>
+            <li><a href="https://corgano.com/">Corgano News</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>For Developers</h5>
+          <ul>
+            <li><a href="#">API Access</a></li>
+            <li><a href="#">RSS Feeds</a></li>
+            <li><a href="#">Embeddable Widgets</a></li>
+            <li><a href="#">Chart Image Hotlinks</a></li>
+            <li><a href="#">Historical Data Downloads</a></li>
+            <li><a href="#">Documentation</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Company</h5>
+          <ul>
+            <li><a href="#">About Corgano</a></li>
+            <li><a href="#">Our Methodology</a></li>
+            <li><a href="#">Editorial Standards</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Press Inquiries</a></li>
+            <li><a href="#">Contact Us</a></li>
+            <li><a href="#">Advertise With Us</a></li>
+            <li><a href="#">Feedback</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Mobile &amp; Alerts</h5>
+          <ul>
+            <li><a href="#">Email Newsletter</a></li>
+            <li><a href="#">Price Alerts (SMS/Email)</a></li>
+            <li><a href="#">Subscribe via RSS</a></li>
+            <li><a href="#">Follow on X / Twitter</a></li>
+            <li><a href="#">Follow on LinkedIn</a></li>
+          </ul>
+          <div class="mf-apps">
+            <a href="#" class="mf-app-btn">iOS App</a>
+            <a href="#" class="mf-app-btn">Android App</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BOTTOM: COPYRIGHT + LEGAL ─── -->
+    <div class="mf-bottom">
+      <div class="mf-copyright">© 2026 CORGANO NETWORK · ALL RIGHTS RESERVED</div>
+      <div class="mf-legal">
+        <a href="#">Terms of Use</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Cookie Policy</a>
+        <a href="#">Disclaimer</a>
+        <a href="#">Risk Warning</a>
+        <a href="#">Accessibility</a>
+        <a href="#">Site Map</a>
+        <a href="#">California Notice</a>
+      </div>
+    </div>
+
+    <div class="mf-disclaimer">
+      Market data is indicative only and may be delayed. Nothing on this site constitutes financial, investment, tax, or legal advice.
+      Precious metals investment carries risk; past performance does not predict future results.
+      The AI Assistant opens external third-party services (Perplexity, ChatGPT, Claude, Google) in a new tab using your own free account — Corgano does not see your queries or receive your chat history.
+      Kitco chart images, when displayed in fallback mode, are hotlinked with attribution per Kitco's terms of service.
+    </div>
+
+  </div>
+</footer>
+
+<!-- ═══════ AI WIDGET ═══════ -->
+<div class="ai-widget">
+  <div class="ai-panel" id="ai-panel">
+    <div class="ai-panel-head">
+      <div class="ai-panel-title">Ask <em>AI</em> about markets</div>
+      <div class="ai-panel-sub">Opens in your chosen free AI · new tab</div>
+    </div>
+    <div class="ai-service-row">
+      <span class="ai-service-label">Use:</span>
+      <button class="ai-svc-btn active" data-svc="perplexity">Perplexity</button>
+      <button class="ai-svc-btn" data-svc="chatgpt">ChatGPT</button>
+      <button class="ai-svc-btn" data-svc="claude">Claude</button>
+      <button class="ai-svc-btn" data-svc="google">Google AI</button>
+    </div>
+    <div class="ai-prompts">
+      <h5>Quick prompts</h5>
+      <div class="ai-prompt-list">
+        <button class="ai-prompt-btn" data-prompt="Why is gold moving today? Explain the main drivers behind gold's current price action with sources.">
+          <span>Why is gold moving today?</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+        <button class="ai-prompt-btn" data-prompt="Give me the latest central bank gold buying data and trends. Who's buying, how much, and why does it matter?">
+          <span>Central bank buying update</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+        <button class="ai-prompt-btn" data-prompt="Explain the gold/silver ratio — what is the current level, what does it historically signal, and how do traders use it?">
+          <span>Explain the gold/silver ratio</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+        <button class="ai-prompt-btn" data-prompt="Which gold and silver miners had the strongest moves today and what news drove them?">
+          <span>Top mining stock movers today</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+        <button class="ai-prompt-btn" data-prompt="Given current macro conditions — inflation, real rates, geopolitics — is now a reasonable time to add gold exposure? Present both sides.">
+          <span>Is now a good time to buy gold?</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+        <button class="ai-prompt-btn" data-prompt="What are the key macro catalysts for precious metals this week? Include Fed events, CPI, geopolitical events.">
+          <span>This week's macro catalysts</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="ai-custom">
+      <input type="text" id="ai-custom-input" placeholder="Ask anything about PM markets..." />
+      <button onclick="launchCustomAI()">Ask →</button>
+    </div>
+  </div>
+  <div class="ai-fab" id="ai-fab" onclick="toggleAI()">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.91 8.91 3 11l6.91 2.09L12 20l2.09-6.91L21 11l-6.91-2.09z"/></svg>
+  </div>
+</div>
+
+<!-- ═══════ SCRIPTS ═══════ -->
+<script>
+/* ─── Real data pipeline: fetch /api/dashboard.php, render panels, handle fallback ─── */
+(function() {
+  // ═══ config ═══
+  const API_ENDPOINT    = '/api/dashboard.php';
+  const DEFAULT_INTERVAL = 60; // seconds
+
+  // Known-good Kitco URLs used when dashboard.php itself is unreachable.
+  // Per Kitco's TOS these MUST link back to kitco.com/connecting.html.
+  const KITCO_FALLBACK = {
+    gold:      'http://www.kitconet.com/images/live/s_gold.gif',
+    silver:    'http://www.kitconet.com/images/live/s_silver.gif',
+    platinum:  'http://www.kitconet.com/images/live/s_platinum.gif',
+    palladium: 'http://www.kitconet.com/images/live/s_palladium.gif',
+    rhodium:   'http://www.kitconet.com/images/live/s_rhodium.gif',
+  };
+  const KITCO_BACKLINK = 'http://www.kitco.com/connecting.html';
+
+  // unit conversion constants (troy oz → other)
+  const GRAMS_PER_TROY_OZ = 31.10347680;
+  const TROY_OZ_PER_TOLA  = 0.374999;   // 1 tola = 11.6638 g = 0.375 troy oz
+
+  // ═══ state ═══
+  let refreshEvery  = DEFAULT_INTERVAL;
+  let secondsLeft   = refreshEvery;
+  let timerId       = null;
+  const lastPrices  = {}; // for flash-on-change comparison
+
+  // ═══ element refs ═══
+  const lastEl         = document.getElementById('last-updated');
+  const cdEl           = document.getElementById('countdown');
+  const intervalSelect = document.getElementById('refresh-interval');
+  const manualBtn      = document.getElementById('manual-refresh');
+
+  // ═══ formatters ═══
+  const fmt = (n, d = 2) =>
+    (n == null || isNaN(n)) ? '—' :
+      Number(n).toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
+  const sgn = (n) => n == null ? '' : (n > 0 ? '+' : '');
+  const dir = (n) => n == null ? 'flat' : (n > 0 ? 'up' : n < 0 ? 'down' : 'flat');
+  const arw = (n) => n == null ? '●' : (n > 0 ? '▲' : n < 0 ? '▼' : '●');
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g,
+    c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function relativeTime(isoString) {
+    if (!isoString) return '';
+    const diff = (Date.now() - new Date(isoString).getTime()) / 1000;
+    if (diff < 60)    return Math.max(1, Math.round(diff)) + 's ago';
+    if (diff < 3600)  return Math.round(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.round(diff / 3600) + 'h ago';
+    return Math.round(diff / 86400) + 'd ago';
+  }
+  function timeHHMM(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' EST';
+  }
+
+  // ═══ fetch + orchestration ═══
+  async function refreshData() {
+    try {
+      const res = await fetch(API_ENDPOINT, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      if (!d.ok) throw new Error(d.error || 'refresh failed');
+
+      if (d.fallback_active) {
+        renderKitcoChart(
+          (d.fallback_charts && d.fallback_charts.gold) || KITCO_FALLBACK.gold,
+          d.fallback_link || KITCO_BACKLINK
+        );
+        markFallback(true, 'metals feed offline');
+      } else {
+        renderSpotPanel(d.metals && d.metals.gold);
+        renderUnitStrip(d.metals && d.metals.gold);
+        renderPerfTable(d.metals && d.metals.gold, d.performance);
+        renderOtherMetals(d.metals);
+        renderFxTable(d.fx_table);
+        renderKgx(d.kgx);
+        renderRatios(d.metals);
+        markFallback(false);
+      }
+
+      renderStocks(d.stocks);
+      renderNews(d.news);
+      renderCorganoArticles(d.corgano_articles);
+      updateLastStamp(d.updated_at);
+
+      if (d.warnings && d.warnings.length) console.info('[dashboard] warnings:', d.warnings);
+      secondsLeft = refreshEvery;
+
+    } catch (err) {
+      console.error('[dashboard] refresh failed:', err);
+      renderKitcoChart(KITCO_FALLBACK.gold, KITCO_BACKLINK);
+      markFallback(true, 'endpoint offline');
+      if (cdEl) cdEl.textContent = 'offline';
+    }
+  }
+
+  // ═══ renderers ═══
+
+  function updateLastStamp(isoString) {
+    if (!lastEl) return;
+    const d = isoString ? new Date(isoString) : new Date();
+    lastEl.textContent =
+      String(d.getHours()).padStart(2,'0') + ':' +
+      String(d.getMinutes()).padStart(2,'0') + ':' +
+      String(d.getSeconds()).padStart(2,'0') + ' EST';
+  }
+
+  function flash(el, newValue, prevValue) {
+    if (prevValue == null || prevValue === newValue) return;
+    el.classList.remove('flash-up','flash-down');
+    void el.offsetWidth;
+    el.classList.add(newValue > prevValue ? 'flash-up' : 'flash-down');
+    setTimeout(() => el.classList.remove('flash-up','flash-down'), 400);
+  }
+
+  function renderSpotPanel(gold) {
+    if (!gold || gold.price == null) return;
+    const priceEl = document.getElementById('spot-price');
+    const chgEl   = document.getElementById('spot-change');
+    const baEl    = document.getElementById('bid-ask-strip');
+
+    if (priceEl) {
+      flash(priceEl, gold.price, lastPrices.gold);
+      priceEl.textContent = fmt(gold.price, 2);
+      priceEl.classList.remove('stale');
+      lastPrices.gold = gold.price;
+    }
+    if (chgEl) {
+      const d = dir(gold.change);
+      chgEl.className = 'spot-change ' + d + ' mono';
+      chgEl.innerHTML =
+        '<span class="arrow">' + arw(gold.change) + '</span>' +
+        sgn(gold.change) + fmt(gold.change, 2) +
+        ' &nbsp; ' + sgn(gold.change_pct) + fmt(gold.change_pct, 2) + '%';
+    }
+    if (baEl) {
+      // MetalpriceAPI returns mid; synthesize a tight spread around it
+      const bid = (gold.price - 0.10);
+      const ask = (gold.price + 0.10);
+      baEl.innerHTML =
+        '<span><em>Bid</em> <b>' + fmt(bid, 2) + '</b></span>' +
+        '<span><em>Ask</em> <b>' + fmt(ask, 2) + '</b></span>';
+    }
+  }
+
+  function renderUnitStrip(gold) {
+    const strip = document.getElementById('unit-strip');
+    if (!strip || !gold || gold.price == null) return;
+    const spot = gold.price;
+    const cells = [
+      { label: 'oz',   val: spot },
+      { label: 'gram', val: spot / GRAMS_PER_TROY_OZ },
+      { label: 'kilo', val: spot * 1000 / GRAMS_PER_TROY_OZ },
+      { label: 'tola', val: spot * TROY_OZ_PER_TOLA * (GRAMS_PER_TROY_OZ / GRAMS_PER_TROY_OZ) },
+    ];
+    // tola = 11.6638g → troy oz ratio: 11.6638/31.1035 = 0.375
+    // spot in USD per tola = spot * 0.375
+    cells[3].val = spot * 0.374999;
+
+    strip.innerHTML = cells.map(c => {
+      // choose decimals based on magnitude
+      const d = c.val >= 1000 ? 0 : 2;
+      return '<div class="unit-cell">' +
+        '<div class="unit-label">' + esc(c.label) + '</div>' +
+        '<div class="unit-value">' + fmt(c.val, d) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderPerfTable(gold, performance) {
+    // "Today" row is always live from gold.change; other rows come from an
+    // optional `performance` block the backend may supply (30d / 6m / 1y / 5y / 20y).
+    // If the backend hasn't populated that yet, we leave the demo values in place.
+    const table = document.getElementById('perf-table');
+    if (!table || !gold) return;
+
+    const todayRow = table.querySelector('tr[data-perf="today"]');
+    if (todayRow && gold.change != null) {
+      const d = dir(gold.change);
+      todayRow.innerHTML =
+        '<td>Today</td>' +
+        '<td class="num ' + d + '">' + sgn(gold.change) + fmt(gold.change, 2) + '</td>' +
+        '<td class="num ' + d + '">' + sgn(gold.change_pct) + fmt(gold.change_pct, 2) + '%</td>';
+    }
+
+    if (performance && typeof performance === 'object') {
+      const windows = {'30d':'30 Days','6m':'6 Months','1y':'1 Year','5y':'5 Years','20y':'20 Years'};
+      Object.keys(windows).forEach(key => {
+        const row = table.querySelector('tr[data-perf="' + key + '"]');
+        const p = performance[key];
+        if (!row || !p) return;
+        const d = dir(p.change);
+        row.innerHTML =
+          '<td>' + windows[key] + '</td>' +
+          '<td class="num ' + d + '">' + sgn(p.change) + fmt(p.change, 2) + '</td>' +
+          '<td class="num ' + d + '">' + sgn(p.change_pct) + fmt(p.change_pct, 2) + '%</td>';
+      });
+    }
+  }
+
+  function renderOtherMetals(metals) {
+    if (!metals) return;
+    const rows = [
+      { key: 'silver',    sym: 'AG', name: 'Silver',    link: 'https://silverprice.corgano.com/' },
+      { key: 'platinum',  sym: 'PT', name: 'Platinum',  link: null },
+      { key: 'palladium', sym: 'PD', name: 'Palladium', link: null },
+      { key: 'rhodium',   sym: 'RH', name: 'Rhodium',   link: null },
+    ];
+    const stack = document.getElementById('metals-stack');
+    if (!stack) return;
+
+    stack.innerHTML = rows.map(r => {
+      const m = metals[r.key];
+      const tag = r.link ? 'a' : 'div';
+      const attrs = r.link
+        ? ` class="metal-row linkable" href="${esc(r.link)}" title="${esc(r.name)} terminal →"`
+        : ' class="metal-row"';
+      if (!m || m.price == null) {
+        return `<${tag}${attrs}>` +
+            '<div class="metal-name"><strong>' + r.sym + '</strong>' + r.name + '</div>' +
+            '<div class="metal-spark"></div>' +
+            '<div class="metal-vals"><div class="metal-price">—</div><div class="metal-chg flat">n/a</div></div>' +
+          `</${tag}>`;
+      }
+      const d = dir(m.change);
+      const manual = m.status === 'manual' || m.manual;
+      return `<${tag}${attrs}>` +
+          '<div class="metal-name"><strong>' + r.sym + '</strong>' + r.name + '</div>' +
+          '<div class="metal-spark" id="spark-' + r.key + '"></div>' +
+          '<div class="metal-vals">' +
+            '<div class="metal-price">' + fmt(m.price, 2) + (manual ? ' <span style="font-size:8px;color:var(--text-dim);letter-spacing:.1em;">WK</span>' : '') + '</div>' +
+            '<div class="metal-chg ' + d + '">' +
+              sgn(m.change) + fmt(m.change, 2) + ' (' + sgn(m.change_pct) + fmt(m.change_pct, 2) + '%)' +
+            '</div>' +
+          '</div>' +
+        `</${tag}>`;
+    }).join('');
+
+    if (typeof window.drawSparklines === 'function') window.drawSparklines(metals);
+  }
+
+  function renderFxTable(fx) {
+    if (!fx || !fx.length) return;
+    const tbody = document.getElementById('fx-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = fx.map(row => {
+      const d = dir(row.change);
+      return '<tr>' +
+          '<td class="sym">' + esc(row.code) + '</td>' +
+          '<td class="num">' + (row.fx_rate == null ? '—' : fmt(row.fx_rate, 4)) + '</td>' +
+          '<td class="num">' + fmt(row.gold_price, 2) + '</td>' +
+          '<td class="num ' + d + '">' + sgn(row.change) + fmt(row.change, 2) + '</td>' +
+          '<td class="num ' + d + '">' + sgn(row.change_pct) + fmt(row.change_pct, 2) + '%</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function renderStocks(stocks) {
+    if (!stocks) return;
+    const nameMap = {
+      NEM: 'Newmont', GOLD: 'Barrick', AEM: 'Agnico Eagle',
+      FNV: 'Franco-Nevada', WPM: 'Wheaton Prec', KGC: 'Kinross',
+      AU: 'AngloGold', GFI: 'Gold Fields',
+      PAAS: 'Pan American', AG: 'First Majestic', HL: 'Hecla Mining',
+      SVM: 'Silvercorp', FSM: 'Fortuna Silver', EXK: 'Endeavour',
+      MAG: 'MAG Silver', SSRM: 'SSR Mining',
+    };
+    const renderMinerTable = (tbodyId, rows) => {
+      const tbody = document.getElementById(tbodyId);
+      if (!tbody || !rows || !rows.length) return;
+      tbody.innerHTML = rows.map(r => {
+        const d = dir(r.change_pct);
+        return '<tr>' +
+            '<td class="sym">' + esc(r.symbol) + '</td>' +
+            '<td class="name">' + esc(nameMap[r.symbol] || r.symbol) + '</td>' +
+            '<td class="num">' + fmt(r.price, 2) + '</td>' +
+            '<td class="num ' + d + '">' + sgn(r.change_pct) + fmt(r.change_pct, 2) + '</td>' +
+          '</tr>';
+      }).join('');
+    };
+    renderMinerTable('miners-gold-tbody',   stocks.miners_gold);
+    renderMinerTable('miners-silver-tbody', stocks.miners_silver);
+  }
+
+  function renderNews(news) {
+    if (!news || !news.length) return;
+    const list = document.getElementById('news-list');
+    if (!list) return;
+    list.innerHTML = news.map(item => {
+      return '<a href="' + esc(item.url) + '" target="_blank" rel="noopener nofollow" class="news-item">' +
+          '<div>' +
+            '<div class="news-meta">' +
+              '<span class="news-source">' + esc((item.source || '').toUpperCase()) + '</span>' +
+              '<span>' + esc(timeHHMM(item.published_at)) + ' · ' + esc(relativeTime(item.published_at)) + '</span>' +
+            '</div>' +
+            '<div class="news-head">' + esc(item.headline) + '</div>' +
+          '</div>' +
+          '<span class="news-tag">' + esc(item.tag || '—') + '</span>' +
+        '</a>';
+    }).join('');
+  }
+
+  function renderCorganoArticles(articles) {
+    if (!articles || !articles.length) return; // keep demo/existing content on empty
+    const list = document.getElementById('commentary-list');
+    if (!list) return;
+
+    list.innerHTML = articles.map(a => {
+      const dateIso = a.date ? (a.date.endsWith('Z') ? a.date : a.date + 'Z') : null;
+      const ago     = relativeTime(dateIso);
+      const readMin = a.read_min || 5;
+      const cat     = a.category ? '<span class="cmt-category">' + esc(a.category) + '</span>' : '';
+      const excerpt = a.excerpt ? '<div class="cmt-excerpt">' + esc(a.excerpt) + '</div>' : '';
+
+      return '<a href="' + esc(a.url) + '" target="_blank" rel="noopener" class="cmt-item cmt-corgano">' +
+          '<div class="cmt-title">' + esc(a.title) + '</div>' +
+          excerpt +
+          '<div class="cmt-byline">' +
+            '<span class="cmt-corgano-badge">CORGANO</span>' +
+            cat +
+            '<span class="author">' + esc(a.author || 'Corgano') + '</span> · ' +
+            readMin + ' min · ' + esc(ago) +
+          '</div>' +
+        '</a>';
+    }).join('');
+  }
+
+  function renderKgx(kgx) {
+    if (!kgx) return;
+    const body = document.getElementById('kgi-body');
+    if (!body) return;
+    const usdDir   = dir(kgx.usd_impact);
+    const buyerDir = dir(kgx.buyer_impact);
+    const totalDir = dir(kgx.total_change);
+    const usdPct   = kgx.usd_pct   || 0;
+    const buyerPct = kgx.buyer_pct || 0;
+    body.innerHTML =
+      '<div class="kgi-row"><span class="kgi-row-label">Due to USD movement</span><span class="kgi-row-value ' + usdDir + '">' + sgn(kgx.usd_impact) + '$' + fmt(Math.abs(kgx.usd_impact), 2) + '</span></div>' +
+      '<div class="kgi-row"><span class="kgi-row-label">Due to predominant buyers</span><span class="kgi-row-value ' + buyerDir + '">' + sgn(kgx.buyer_impact) + '$' + fmt(Math.abs(kgx.buyer_impact), 2) + '</span></div>' +
+      '<div class="kgi-row"><span class="kgi-row-label">Total gold change</span><span class="kgi-row-value ' + totalDir + '">' + sgn(kgx.total_change) + '$' + fmt(Math.abs(kgx.total_change), 2) + '</span></div>' +
+      '<div class="kgi-bar" title="USD ' + usdPct + '% vs Buyers ' + buyerPct + '%">' +
+        '<div class="kgi-bar-seg kgi-bar-usd" style="flex-basis:' + usdPct + '%"></div>' +
+        '<div class="kgi-bar-seg kgi-bar-buyers" style="flex-basis:' + buyerPct + '%"></div>' +
+      '</div>' +
+      '<div class="kgi-summary">' + esc(kgx.summary || '') + '</div>';
+  }
+
+  function renderRatios(metals) {
+    if (!metals || !metals.gold || metals.gold.price == null) return;
+    const grid = document.getElementById('ratios-grid');
+    if (!grid) return;
+    const g = metals.gold;
+    const ratio = (denomObj) => {
+      if (!denomObj || denomObj.price == null || denomObj.price === 0) return null;
+      return g.price / denomObj.price;
+    };
+    const rows = [
+      { label: 'Gold / Silver',    value: ratio(metals.silver),    cross: { href: 'https://silverprice.corgano.com/', label: 'See silver price' } },
+      { label: 'Gold / Platinum',  value: ratio(metals.platinum),  cross: null },
+      { label: 'Gold / Palladium', value: ratio(metals.palladium), cross: null },
+      { label: 'Gold / Rhodium',   value: ratio(metals.rhodium),   cross: null },
+    ];
+    grid.innerHTML = rows.map(r => {
+      const v = r.value == null ? '—' : fmt(r.value, r.value < 1 ? 4 : 2);
+      const crossLink = r.cross
+        ? '<a class="ratio-cross" href="' + esc(r.cross.href) + '">' + esc(r.cross.label) + '</a>'
+        : '';
+      return '<div class="ratio-cell">' +
+          '<span class="ratio-label">' + esc(r.label) + '</span>' +
+          '<span class="ratio-value">' + v + '</span>' +
+          '<span class="ratio-chg flat">—</span>' +
+          crossLink +
+        '</div>';
+    }).join('');
+  }
+
+  // ═══ fallback helpers ═══
+  function renderKitcoChart(imgUrl, backLink) {
+    const chartEl = document.getElementById('main-chart');
+    if (!chartEl) return;
+    chartEl.innerHTML =
+      '<a href="' + esc(backLink) + '" target="_blank" rel="noopener nofollow" class="fallback-chart" title="Chart hotlinked from Kitco (fallback)">' +
+        '<img src="' + esc(imgUrl) + '" alt="Gold chart — hotlinked from Kitco" loading="lazy" />' +
+        '<span class="fallback-attribution">Chart source: Kitco · live feed offline</span>' +
+      '</a>';
+  }
+
+  function markFallback(active, reason) {
+    let pill = document.getElementById('fallback-pill');
+    if (active) {
+      if (!pill) {
+        pill = document.createElement('div');
+        pill.id = 'fallback-pill';
+        pill.className = 'status-pill fallback-pill';
+        const tbRight = document.querySelector('.topbar-right');
+        if (tbRight) tbRight.insertBefore(pill, tbRight.firstChild);
+      }
+      pill.innerHTML =
+        '<span class="fallback-dot"></span>' +
+        '<span class="status-label">FALLBACK</span>' +
+        (reason ? '<span class="fallback-reason">' + esc(reason) + '</span>' : '');
+    } else if (pill) {
+      pill.remove();
+    }
+  }
+
+  // ═══ countdown timer ═══
+  function tick() {
+    if (refreshEvery === 0) {
+      if (cdEl) cdEl.textContent = 'Off';
+      return;
+    }
+    secondsLeft--;
+    if (secondsLeft <= 0) { refreshData(); return; }
+    if (cdEl) cdEl.textContent = secondsLeft >= 60
+      ? Math.floor(secondsLeft / 60) + 'm ' + (secondsLeft % 60) + 's'
+      : secondsLeft + 's';
+  }
+  function startTimer() {
+    if (timerId) clearInterval(timerId);
+    timerId = setInterval(tick, 1000);
+  }
+
+  // ═══ event wiring ═══
+  if (intervalSelect) {
+    intervalSelect.addEventListener('change', e => {
+      refreshEvery = parseInt(e.target.value, 10);
+      secondsLeft = refreshEvery;
+      if (refreshEvery === 0 && cdEl) cdEl.textContent = 'Off';
+    });
+  }
+  if (manualBtn) {
+    manualBtn.addEventListener('click', () => refreshData());
+  }
+
+  // ═══ kickoff ═══
+  updateLastStamp();
+  startTimer();
+  refreshData(); // first fetch immediately; if it fails, demo data stays visible and fallback pill appears
+})();
+
+/* ─── Theme toggle ─── */
+document.getElementById('theme-toggle').addEventListener('click', function() {
+  const html = document.documentElement;
+  const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
+  html.dataset.theme = next;
+});
+
+/* ─── Chart tabs + SVG generation ─── */
+(function() {
+  const canvas = document.getElementById('main-chart');
+  const tabs = document.querySelectorAll('.chart-tab');
+
+  // generate plausible chart data for each timeframe
+  function generateSeries(n, startVal, drift, vol, seed) {
+    const pts = [];
+    let v = startVal;
+    let rng = seed;
+    function rand() { rng = (rng * 9301 + 49297) % 233280; return rng / 233280; }
+    for (let i = 0; i < n; i++) {
+      v += drift + (rand() - 0.5) * vol;
+      pts.push(v);
+    }
+    return pts;
+  }
+
+  const timeframes = {
+    '1D': generateSeries(78, 4650, 0.5, 8, 42),
+    '1W': generateSeries(50, 4580, 2.2, 12, 11),
+    '1M': generateSeries(60, 4460, 3.8, 25, 7),
+    '3M': generateSeries(80, 4200, 6, 40, 23),
+    '1Y': generateSeries(100, 3850, 8.5, 60, 91),
+    '5Y': generateSeries(120, 1850, 23, 110, 55),
+  };
+
+  function renderChart(tf) {
+    const data = timeframes[tf] || timeframes['1W'];
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    const padX = 12, padTop = 10, padBottom = 20;
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+    const stepX = (w - padX * 2) / (data.length - 1);
+
+    const points = data.map((val, i) => {
+      const x = padX + i * stepX;
+      const y = padTop + (1 - (val - min) / range) * (h - padTop - padBottom);
+      return [x, y];
+    });
+
+    const line = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    const area = line + ` L${points[points.length-1][0].toFixed(1)},${h-padBottom} L${points[0][0].toFixed(1)},${h-padBottom} Z`;
+
+    // grid lines (4 horizontal)
+    const gridLines = [];
+    for (let i = 0; i <= 4; i++) {
+      const y = padTop + (i / 4) * (h - padTop - padBottom);
+      const val = max - (i/4) * range;
+      gridLines.push(`<line x1="${padX}" y1="${y}" x2="${w-padX}" y2="${y}" stroke="var(--border-soft)" stroke-width="1" stroke-dasharray="2,3" />`);
+      gridLines.push(`<text x="${w-padX+4}" y="${y+3}" fill="var(--text-dim)" font-size="9" font-family="'IBM Plex Mono', monospace">${val.toFixed(0)}</text>`);
+    }
+
+    const latestPoint = points[points.length-1];
+    const firstPoint = points[0];
+    const isUp = data[data.length-1] > data[0];
+    const strokeColor = isUp ? 'var(--up)' : 'var(--down)';
+    const fillId = 'fill-' + tf;
+
+    canvas.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${isUp ? '#4ade80' : '#f87171'}" stop-opacity="0.25" />
+            <stop offset="100%" stop-color="${isUp ? '#4ade80' : '#f87171'}" stop-opacity="0.01" />
+          </linearGradient>
+        </defs>
+        ${gridLines.join('')}
+        <path d="${area}" fill="url(#${fillId})" />
+        <path d="${line}" fill="none" stroke="${strokeColor}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" />
+        <circle cx="${latestPoint[0]}" cy="${latestPoint[1]}" r="3" fill="${strokeColor}" />
+        <circle cx="${latestPoint[0]}" cy="${latestPoint[1]}" r="6" fill="${strokeColor}" opacity="0.2">
+          <animate attributeName="r" from="3" to="10" dur="1.5s" repeatCount="indefinite" />
+          <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+    `;
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function() {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderChart(tab.dataset.tf);
+    });
+  });
+
+  renderChart('1W');
+  window.addEventListener('resize', () => {
+    const active = document.querySelector('.chart-tab.active');
+    if (active) renderChart(active.dataset.tf);
+  });
+})();
+
+/* ─── Mini sparklines for PM metals ─── */
+(function() {
+  function spark(elId, isUp, seed) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const w = 90, h = 28;
+    let rng = seed;
+    function rand() { rng = (rng * 9301 + 49297) % 233280; return rng / 233280; }
+    const pts = [];
+    let v = 50;
+    for (let i = 0; i < 24; i++) {
+      v += (isUp ? 0.4 : -0.1) + (rand() - 0.5) * 3;
+      pts.push(v);
+    }
+    const min = Math.min(...pts), max = Math.max(...pts), range = max - min || 1;
+    const step = w / (pts.length - 1);
+    const line = pts.map((v, i) => {
+      const x = i * step;
+      const y = h - 2 - ((v - min) / range) * (h - 6);
+      return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    const color = isUp ? 'var(--up)' : 'var(--down)';
+    el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <path d="${line}" fill="none" stroke="${color}" stroke-width="1.25" stroke-linejoin="round" />
+    </svg>`;
+  }
+  // Initial paint (matches demo data)
+  spark('spark-silver', true, 17);
+  spark('spark-plat', false, 41);
+  spark('spark-pall', true, 73);
+  spark('spark-rhod', true, 99);
+
+  // Expose for real-data renderer — redraws after each API refresh
+  window.drawSparklines = function(metals) {
+    if (!metals) return;
+    const seedMap = { silver: 17, platinum: 41, palladium: 73, rhodium: 99 };
+    const elMap   = { silver: 'spark-silver', platinum: 'spark-plat', palladium: 'spark-pall', rhodium: 'spark-rhod' };
+    Object.keys(elMap).forEach(key => {
+      const m = metals[key];
+      if (!m || m.change == null) return;
+      spark(elMap[key], m.change >= 0, seedMap[key]);
+    });
+  };
+})();
+
+/* ─── AI widget ─── */
+const aiServices = {
+  perplexity: q => `https://www.perplexity.ai/search?q=${encodeURIComponent(q)}`,
+  chatgpt:    q => `https://chatgpt.com/?q=${encodeURIComponent(q)}`,
+  claude:     q => `https://claude.ai/new?q=${encodeURIComponent(q)}`,
+  google:     q => `https://www.google.com/search?udm=50&q=${encodeURIComponent(q)}`,
+};
+
+let currentService = localStorage.getItem('corgano-ai-svc') || 'perplexity';
+document.querySelectorAll('.ai-svc-btn').forEach(btn => {
+  if (btn.dataset.svc === currentService) btn.classList.add('active');
+  else btn.classList.remove('active');
+  btn.addEventListener('click', () => {
+    currentService = btn.dataset.svc;
+    localStorage.setItem('corgano-ai-svc', currentService);
+    document.querySelectorAll('.ai-svc-btn').forEach(b => b.classList.toggle('active', b.dataset.svc === currentService));
+  });
+});
+
+function toggleAI() {
+  document.getElementById('ai-panel').classList.toggle('open');
+  document.getElementById('ai-fab').classList.toggle('open');
+}
+
+function launchAI(prompt) {
+  const ctx = `As of April 21, 2026, gold is trading near $4,687/oz and silver near $84/oz. `;
+  const fullQuery = ctx + prompt;
+  const url = aiServices[currentService](fullQuery);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+document.querySelectorAll('.ai-prompt-btn').forEach(btn => {
+  btn.addEventListener('click', () => launchAI(btn.dataset.prompt));
+});
+
+function launchCustomAI() {
+  const input = document.getElementById('ai-custom-input');
+  const q = input.value.trim();
+  if (!q) return;
+  launchAI(q);
+  input.value = '';
+}
+
+document.getElementById('ai-custom-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') launchCustomAI();
+});
+
+// close AI on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && document.getElementById('ai-panel').classList.contains('open')) {
+    toggleAI();
+  }
+});
+</script>
+
+</body>
+</html>

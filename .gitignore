@@ -1,0 +1,43 @@
+# ── Never commit real config (contains API keys) ──
+config.php
+private/config.php
+/config.php
+*.env
+.env
+
+# ── Runtime-generated data (created on server, not in repo) ──
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+cache/
+*.cache
+*.log
+
+# ── OS / editor cruft ──
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+.project
+.settings/
+
+# ── PHP / Composer (not used, but safe to block) ──
+vendor/
+composer.lock
+
+# ── Node (if you add tooling later) ──
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# ── Build artifacts ──
+dist/
+build/
+*.zip
+*.tar.gz

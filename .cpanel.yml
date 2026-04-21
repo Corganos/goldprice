@@ -1,0 +1,41 @@
+---
+# ═══════════════════════════════════════════════════════════════════════
+# cPanel Git deployment script for goldprice.corgano.com
+#
+# When you push to GitHub and run "Deploy HEAD Commit" in cPanel,
+# these tasks copy files from the git clone into their live locations.
+#
+# ⚠️  EDIT THE TWO EXPORT LINES BELOW — replace "corganos" with your
+#     actual cPanel username (check the top-right of your cPanel, or
+#     run `whoami` in SSH).
+#
+# If your subdomain was created as a separate folder rather than a
+# subdirectory of public_html, change DEPLOYPATH accordingly — e.g.
+#   /home/corganos/goldprice.corgano.com/
+# ═══════════════════════════════════════════════════════════════════════
+
+deployment:
+  tasks:
+    # ─── EDIT THESE TWO LINES ───────────────────────────────────
+    - export DEPLOYPATH=/home/corganos/public_html/goldprice/
+    - export PRIVATEPATH=/home/corganos/private/
+    # ────────────────────────────────────────────────────────────
+
+    # ─── public web files (served at goldprice.corgano.com) ─────
+    - /bin/mkdir -p $DEPLOYPATH/api
+    - /bin/cp public/index.html        $DEPLOYPATH
+    - /bin/cp public/performance.html  $DEPLOYPATH
+    - /bin/cp public/robots.txt        $DEPLOYPATH
+    - /bin/cp public/api/dashboard.php $DEPLOYPATH/api/
+
+    # ─── private files (above docroot, NOT web-accessible) ──────
+    # Intentionally copies config.EXAMPLE.php only — never overwrites
+    # your real config.php. On first deploy, SSH in and:
+    #   cp ~/private/config.example.php ~/private/config.php
+    #   nano ~/private/config.php   # fill in real API keys
+    - /bin/mkdir -p $PRIVATEPATH/cron
+    - /bin/mkdir -p $PRIVATEPATH/data/cache
+    - /bin/cp private/config.example.php  $PRIVATEPATH/config.example.php
+    - /bin/cp private/cron/fetch-news.php $PRIVATEPATH/cron/
+    - /bin/cp private/cron/tag-news.php   $PRIVATEPATH/cron/
+    - /bin/cp private/README.md           $PRIVATEPATH/
