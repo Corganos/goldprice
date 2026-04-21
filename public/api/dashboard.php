@@ -87,14 +87,33 @@ function fetch_metals_and_fx(array $cfg): ?array {
     if (!$latest || empty($latest['rates'])) return null;
     $prev = $prev['rates'] ?? $latest['rates']; // fall back to today if yesterday fails
 
-    // helper: MetalpriceAPI returns USDXAU as "XAU per 1 USD" (tiny number).
-    // 1 oz gold in USD = 1 / USDXAU
-    $priceOf = function(string $code, array $rates): ?float {
-        $k = 'USD' . $code;
-        return isset($rates[$k]) && $rates[$k] > 0 ? 1 / $rates[$k] : null;
+    // MetalpriceAPI returns rates in one of two key formats depending on plan:
+    //   (a) {"USDXAU": 0.000213}  — "XAU per 1 USD" (inverse, needs 1/x to get USD/oz)
+    //   (b) {"XAU": 0.000213}     — same value, no base prefix
+    // AND rates can be in one of two modes:
+    //   (a) inverse: XAU ≈ 0.0002 (tiny fraction of ounce per dollar)
+    //   (b) direct:  XAU ≈ 4700    (dollars per ounce, NO inversion needed)
+    // We detect both automatically by probing the actual response.
+    $rateLookup = function(string $code, array $rates): ?float {
+        // Try prefixed key first, then unprefixed
+        if (isset($rates['USD' . $code])) return (float)$rates['USD' . $code];
+        if (isset($rates[$code]))         return (float)$rates[$code];
+        return null;
     };
-    $fxRateOf = function(string $code, array $rates): ?float {
-        return $rates['USD' . $code] ?? null;
+
+    // Detect the rate mode: if XAU rate is less than 1, it's inverse (fraction per USD).
+    // If it's way bigger than 1 (like 4000+), it's already USD per ounce.
+    $xauRate = $rateLookup('XAU', $latest['rates']);
+    $isInverse = $xauRate !== null && $xauRate < 1;
+
+    $priceOf = function(string $code, array $rates) use ($rateLookup, $isInverse): ?float {
+        $r = $rateLookup($code, $rates);
+        if ($r === null || $r <= 0) return null;
+        return $isInverse ? (1 / $r) : $r;
+    };
+    // FX rate for fiat is always "CURRENCY per USD" regardless of mode, so no inversion.
+    $fxRateOf = function(string $code, array $rates) use ($rateLookup): ?float {
+        return $rateLookup($code, $rates);
     };
 
     $out = ['metals' => [], 'fx_table' => []];
