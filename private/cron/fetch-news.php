@@ -38,15 +38,58 @@ $insert = $db->prepare(
 $inserted = 0;
 $skipped  = 0;
 $errored  = 0;
+$perFeedLog = [];
+
+// Many publishers (Kitco, Mining.com) 403 on unknown/PHP user-agents.
+// Use a real-browser UA — their WAFs accept this for RSS access.
+$userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+           . '(KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
 foreach ($feeds as $feed) {
-    $ctx  = stream_context_create(['http' => ['timeout' => 10, 'user_agent' => 'GoldTerminal/1.0']]);
-    $xml  = @file_get_contents($feed['url'], false, $ctx);
-    if (!$xml) { $errored++; continue; }
+    $feedInserted = 0; $feedErrored = 0;
+    $ctx  = stream_context_create([
+        'http' => [
+            'timeout'       => 10,
+            'user_agent'    => $userAgent,
+            'header'        => "Accept: application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8\r\n"
+                             . "Accept-Language: en-US,en;q=0.9\r\n",
+            'follow_location' => 1,
+            'max_redirects'   => 3,
+            'ignore_errors'   => true,  // so we can see 4xx bodies if useful
+        ],
+        'https' => [
+            'timeout'       => 10,
+            'user_agent'    => $userAgent,
+            'header'        => "Accept: application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8\r\n"
+                             . "Accept-Language: en-US,en;q=0.9\r\n",
+            'follow_location' => 1,
+            'max_redirects'   => 3,
+            'ignore_errors'   => true,
+        ],
+    ]);
+    $xml = @file_get_contents($feed['url'], false, $ctx);
+    if (!$xml) {
+        $perFeedLog[] = "FAIL  {$feed['source']}: no response";
+        $errored++; continue;
+    }
+    // check HTTP response code from $http_response_header (populated by stream wrapper)
+    $httpStatus = 0;
+    if (isset($http_response_header) && is_array($http_response_header)) {
+        foreach ($http_response_header as $h) {
+            if (preg_match('#^HTTP/\S+\s+(\d+)#', $h, $m)) $httpStatus = (int)$m[1];
+        }
+    }
+    if ($httpStatus >= 400) {
+        $perFeedLog[] = "FAIL  {$feed['source']}: HTTP {$httpStatus}";
+        $errored++; continue;
+    }
 
     libxml_use_internal_errors(true);
     $doc = @simplexml_load_string($xml);
-    if (!$doc) { $errored++; continue; }
+    if (!$doc) {
+        $perFeedLog[] = "FAIL  {$feed['source']}: invalid XML";
+        $errored++; continue;
+    }
 
     // handle both RSS 2.0 (<channel><item>) and Atom (<entry>) layouts
     $items = $doc->channel->item ?? $doc->entry ?? [];
@@ -70,11 +113,12 @@ foreach ($feeds as $feed) {
                 ':published_at' => $pubIso,
                 ':fetched_at'   => gmdate('c'),
             ]);
-            if ($insert->rowCount() > 0) $inserted++; else $skipped++;
+            if ($insert->rowCount() > 0) { $inserted++; $feedInserted++; } else $skipped++;
         } catch (Throwable $e) {
-            $errored++;
+            $errored++; $feedErrored++;
         }
     }
+    $perFeedLog[] = "OK    {$feed['source']}: +{$feedInserted} new" . ($feedErrored ? " ({$feedErrored} errors)" : '');
 }
 
 // housekeeping: keep the most recent 500 items, drop the rest
@@ -82,3 +126,4 @@ $db->exec('DELETE FROM news WHERE id NOT IN
            (SELECT id FROM news ORDER BY published_at DESC LIMIT 500)');
 
 echo "[" . date('c') . "] fetch-news: +{$inserted} inserted, {$skipped} duplicate, {$errored} errors\n";
+foreach ($perFeedLog as $line) echo "  {$line}\n";

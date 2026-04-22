@@ -6,6 +6,20 @@
 <title>Gold Terminal — Corgano Network</title>
 <meta name="description" content="Live precious metals dashboard: gold, silver, platinum, palladium. Spot prices, ratios, news, miners, and FX — all on one page.">
 
+<!-- Google Analytics 4 (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-412K8291CM"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-412K8291CM', {
+    // GA4 auto-tracks pageviews, scrolls, outbound links, file downloads — no extra config needed.
+    // We customize: mark this as the gold subdomain for cross-network segmentation.
+    custom_map: { dimension1: 'network_subdomain' },
+    network_subdomain: 'gold'
+  });
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -1385,12 +1399,12 @@
     <div class="brand-sub">Corgano · v2.1</div>
   </div>
   <nav class="topnav">
-    <a href="#" class="active">Terminal</a>
-    <a href="#">Charts</a>
-    <a href="#">News</a>
-    <a href="#">Analysis</a>
-    <a href="#">Miners</a>
-    <a href="#">Forum</a>
+    <a href="/" class="active">Terminal</a>
+    <a href="/performance.html">Charts</a>
+    <a href="https://corgano.com/blog/category/business/">News</a>
+    <a href="https://corgano.com/blog/category/business/">Analysis</a>
+    <a href="#miners-gold-tbody">Miners</a>
+    <a href="https://corgano.com/contact">Forum</a>
   </nav>
   <div class="topbar-right">
     <div class="status-pill">
@@ -3102,7 +3116,7 @@
             '<td class="sym">' + esc(r.symbol) + '</td>' +
             '<td class="name">' + esc(nameMap[r.symbol] || r.symbol) + '</td>' +
             '<td class="num">' + fmt(r.price, 2) + '</td>' +
-            '<td class="num ' + d + '">' + sgn(r.change_pct) + fmt(r.change_pct, 2) + '</td>' +
+            '<td class="num ' + d + '">' + sgn(r.change_pct) + fmt(r.change_pct, 2) + '%</td>' +
           '</tr>';
       }).join('');
     };
@@ -3302,7 +3316,7 @@ document.getElementById('theme-toggle').addEventListener('click', function() {
     allow_symbol_change: true,     // users can look up silver, bitcoin, etc.
     save_image: false,
     calendar: false,
-    hide_volume: false,
+    hide_volume: true,             // gold spot has no meaningful volume data (OTC); hiding keeps chart clean
     support_host: 'https://www.tradingview.com',
     backgroundColor: 'rgba(19, 20, 23, 1)',    // matches --bg-raised
     gridColor: 'rgba(35, 38, 43, 0.6)',         // matches --border
@@ -3368,6 +3382,8 @@ const aiServices = {
 };
 
 let currentService = localStorage.getItem('corgano-ai-svc') || 'perplexity';
+// Expose for GA event tracker to read (see tracking block at end of script)
+Object.defineProperty(window, 'currentService', { get: () => currentService });
 document.querySelectorAll('.ai-svc-btn').forEach(btn => {
   if (btn.dataset.svc === currentService) btn.classList.add('active');
   else btn.classList.remove('active');
@@ -3412,6 +3428,167 @@ document.addEventListener('keydown', function(e) {
     toggleAI();
   }
 });
+
+/* ─── Google Analytics: custom event tracking ─── */
+(function() {
+  // Safe wrapper — gtag is loaded async and may be absent if an ad-blocker
+  // is active. This makes sure a missing GA never crashes anything else.
+  function track(eventName, params) {
+    try {
+      if (typeof gtag === 'function') {
+        gtag('event', eventName, params || {});
+      }
+    } catch (e) { /* GA errors never break the site */ }
+  }
+  window.corganoTrack = track; // exposed for other scripts if needed
+
+  // AI widget — which prompts get used, which LLM people prefer
+  const _origLaunchAI = window.launchAI;
+  window.launchAI = function(prompt) {
+    track('ai_prompt_launched', {
+      prompt_preview: (prompt || '').substring(0, 80),
+      ai_service: window.currentService || 'unknown',
+      prompt_type: 'preset',
+    });
+    if (typeof _origLaunchAI === 'function') return _origLaunchAI(prompt);
+  };
+  const _origLaunchCustom = window.launchCustomAI;
+  window.launchCustomAI = function() {
+    const input = document.getElementById('ai-custom-input');
+    const q = input ? input.value.trim() : '';
+    if (q) {
+      track('ai_prompt_launched', {
+        prompt_preview: q.substring(0, 80),
+        ai_service: window.currentService || 'unknown',
+        prompt_type: 'custom',
+      });
+    }
+    if (typeof _origLaunchCustom === 'function') return _origLaunchCustom();
+  };
+  // AI service switcher (Perplexity / ChatGPT / Claude / Google)
+  document.querySelectorAll('.ai-svc-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      track('ai_service_changed', { ai_service: btn.dataset.svc });
+    });
+  });
+  // AI panel open/close
+  const _origToggleAI = window.toggleAI;
+  window.toggleAI = function() {
+    const panel = document.getElementById('ai-panel');
+    const wasOpen = panel && panel.classList.contains('open');
+    track(wasOpen ? 'ai_panel_closed' : 'ai_panel_opened', {});
+    if (typeof _origToggleAI === 'function') return _origToggleAI();
+  };
+
+  // Refresh interval changes — do users want faster/slower updates?
+  const intervalEl = document.getElementById('refresh-interval');
+  if (intervalEl) {
+    intervalEl.addEventListener('change', (e) => {
+      track('refresh_interval_changed', {
+        new_interval_seconds: parseInt(e.target.value, 10),
+      });
+    });
+  }
+  // Manual refresh button clicks — signals user impatience with auto-refresh rate
+  const manualBtn = document.getElementById('manual-refresh');
+  if (manualBtn) {
+    manualBtn.addEventListener('click', () => track('manual_refresh_clicked', {}));
+  }
+
+  // Theme toggle usage
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+      track('theme_toggled', { new_theme: document.documentElement.dataset.theme || 'unknown' });
+    });
+  }
+
+  // Cross-network navigation — which sister sites do users click to?
+  // This is the single most important metric for the multi-subdomain strategy.
+  document.querySelectorAll('.network-strip nav a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      // Ignore future/placeholder links (data-future attribute, href="#")
+      if (link.classList.contains('future') || link.getAttribute('href') === '#') return;
+      track('network_strip_click', {
+        destination: (link.textContent || '').trim(),
+        href: link.getAttribute('href'),
+      });
+    });
+  });
+  // Clickable ticker items that link to sister sites
+  document.querySelectorAll('a.ticker-item').forEach(link => {
+    link.addEventListener('click', () => {
+      const sym = link.querySelector('strong');
+      track('ticker_item_click', {
+        symbol: sym ? sym.textContent.trim() : 'unknown',
+        href: link.getAttribute('href'),
+      });
+    });
+  });
+  // "See silver price →" / "See bitcoin price →" cross-link from Ratios panel
+  document.querySelectorAll('.ratio-cross').forEach(link => {
+    link.addEventListener('click', () => {
+      track('ratio_cross_click', {
+        destination: (link.textContent || '').trim(),
+        href: link.getAttribute('href'),
+      });
+    });
+  });
+  // Linkable metal rows in the Other Metals panel
+  document.querySelectorAll('.metal-row.linkable').forEach(link => {
+    link.addEventListener('click', () => {
+      const name = link.querySelector('.metal-name');
+      track('metal_row_click', {
+        metal: name ? name.textContent.trim() : 'unknown',
+        href: link.getAttribute('href'),
+      });
+    });
+  });
+
+  // Mega footer clicks — tells us which SEO landing pages users want built next
+  // (clicks on href="#" placeholder links are a strong signal of demand)
+  document.querySelectorAll('.mega-footer a').forEach(link => {
+    link.addEventListener('click', () => {
+      const href = link.getAttribute('href') || '';
+      const text = (link.textContent || '').trim();
+      // Only track interesting clicks: either actual destinations or
+      // placeholder clicks (which are the demand signals).
+      if (href === '#' || href.startsWith('#')) {
+        track('footer_placeholder_click', { link_text: text });
+      } else if (href.startsWith('http') || href.startsWith('/')) {
+        track('footer_link_click', {
+          link_text: text,
+          href: href,
+          is_external: href.includes('://') && !href.includes('corgano.com'),
+        });
+      }
+    });
+  });
+
+  // Corgano editorial article clicks
+  document.querySelectorAll('.cmt-corgano').forEach(link => {
+    link.addEventListener('click', () => {
+      const title = link.querySelector('.cmt-title');
+      track('corgano_article_click', {
+        article_title: title ? title.textContent.trim().substring(0, 100) : 'unknown',
+        href: link.getAttribute('href'),
+      });
+    });
+  });
+
+  // News item clicks (outbound to original source)
+  document.querySelectorAll('#news-list .news-item').forEach(link => {
+    link.addEventListener('click', () => {
+      const source = link.querySelector('.news-source');
+      const head = link.querySelector('.news-head');
+      track('news_click', {
+        source: source ? source.textContent.trim() : 'unknown',
+        headline: head ? head.textContent.trim().substring(0, 100) : 'unknown',
+        href: link.getAttribute('href'),
+      });
+    });
+  });
+})();
 </script>
 
 </body>
