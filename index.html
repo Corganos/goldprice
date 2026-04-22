@@ -353,44 +353,36 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* ─── chart panel ─── */
-  .chart-tabs {
-    display: flex;
-    gap: 0;
+  /* ─── chart panel (TradingView embed) ─── */
+  .chart-provider {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 4px 10px;
     border-left: 1px solid var(--border-soft);
   }
-  .chart-tab {
-    padding: 4px 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-    border-right: 1px solid var(--border-soft);
-    transition: all 0.15s;
+  .tv-chart-wrap {
+    width: 100%;
+    padding: 0;
+    background: var(--bg-raised);
   }
-  .chart-tab:hover { color: var(--text); background: var(--bg-hover); }
-  .chart-tab.active { color: var(--gold); background: var(--bg-hover); }
-
-  .chart-canvas { position: relative; width: 100%; height: 220px; }
-  .chart-canvas svg { width: 100%; height: 100%; display: block; }
-  .chart-legend {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 10px 2px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: var(--text-dim);
+  .tv-chart-container {
+    position: relative;
+    width: 100%;
+    height: 560px;
+    /* TradingView's iframe fills this — we just reserve the space. */
   }
-  .chart-expand {
-    padding: 4px 10px;
-    border-top: 1px solid var(--border-soft);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    color: var(--link);
-    text-align: right;
-    letter-spacing: 0.05em;
+  .tv-chart-container > div,
+  .tv-chart-container iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
   }
-  .chart-expand:hover { color: var(--gold); }
+  @media (max-width: 900px) {
+    .tv-chart-container { height: 420px; }
+  }
 
   /* ─── metals stack (silver/plat/pall/rhodium) ─── */
   .metals-stack { display: flex; flex-direction: column; }
@@ -1537,21 +1529,13 @@
   <section class="panel c6">
     <div class="panel-header">
       <div class="panel-title"><span class="gold-dot"></span>XAU/USD · CHART</div>
-      <div class="chart-tabs">
-        <button class="chart-tab" data-tf="1D">1D</button>
-        <button class="chart-tab active" data-tf="1W">1W</button>
-        <button class="chart-tab" data-tf="1M">1M</button>
-        <button class="chart-tab" data-tf="3M">3M</button>
-        <button class="chart-tab" data-tf="1Y">1Y</button>
-        <button class="chart-tab" data-tf="5Y">5Y</button>
+      <div class="chart-provider">via TradingView</div>
+    </div>
+    <div class="tv-chart-wrap">
+      <div class="tv-chart-container" id="tv-chart-container">
+        <div id="tv-chart-widget"></div>
       </div>
     </div>
-    <div class="chart-canvas" id="main-chart"></div>
-    <div class="chart-legend">
-      <span>Apr 14 – Apr 21</span>
-      <span><span class="up mono">H 4,695.40</span> &nbsp; <span class="down mono">L 4,589.10</span></span>
-    </div>
-    <a href="#" class="chart-expand">View full chart & technical indicators →</a>
   </section>
 
   <!-- Other PMs -->
@@ -3220,7 +3204,11 @@
 
   // ═══ fallback helpers ═══
   function renderKitcoChart(imgUrl, backLink) {
-    const chartEl = document.getElementById('main-chart');
+    // When the primary metals feed dies, we replace the TradingView iframe
+    // with a hotlinked Kitco chart image. TradingView itself is independent
+    // so this only fires for total-API-failure scenarios; normal fallback
+    // just keeps the live chart up and serves cached price data.
+    const chartEl = document.getElementById('tv-chart-widget') || document.getElementById('tv-chart-container');
     if (!chartEl) return;
     chartEl.innerHTML =
       '<a href="' + esc(backLink) + '" target="_blank" rel="noopener nofollow" class="fallback-chart" title="Chart hotlinked from Kitco (fallback)">' +
@@ -3290,100 +3278,40 @@ document.getElementById('theme-toggle').addEventListener('click', function() {
   html.dataset.theme = next;
 });
 
-/* ─── Chart tabs + SVG generation ─── */
+/* ─── TradingView Chart Widget (XAU/USD) ─── */
 (function() {
-  const canvas = document.getElementById('main-chart');
-  const tabs = document.querySelectorAll('.chart-tab');
+  // Dynamically inject TradingView's embed library, then spin up the chart.
+  // We use the free "Advanced Chart Widget" — no API key, no quota, no cost.
+  // Symbol: TVC:GOLD is TradingView's code for spot gold in USD.
+  const container = document.getElementById('tv-chart-widget');
+  if (!container) return;
 
-  // generate plausible chart data for each timeframe
-  function generateSeries(n, startVal, drift, vol, seed) {
-    const pts = [];
-    let v = startVal;
-    let rng = seed;
-    function rand() { rng = (rng * 9301 + 49297) % 233280; return rng / 233280; }
-    for (let i = 0; i < n; i++) {
-      v += drift + (rand() - 0.5) * vol;
-      pts.push(v);
-    }
-    return pts;
-  }
-
-  const timeframes = {
-    '1D': generateSeries(78, 4650, 0.5, 8, 42),
-    '1W': generateSeries(50, 4580, 2.2, 12, 11),
-    '1M': generateSeries(60, 4460, 3.8, 25, 7),
-    '3M': generateSeries(80, 4200, 6, 40, 23),
-    '1Y': generateSeries(100, 3850, 8.5, 60, 91),
-    '5Y': generateSeries(120, 1850, 23, 110, 55),
-  };
-
-  function renderChart(tf) {
-    const data = timeframes[tf] || timeframes['1W'];
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
-    const padX = 12, padTop = 10, padBottom = 20;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min || 1;
-    const stepX = (w - padX * 2) / (data.length - 1);
-
-    const points = data.map((val, i) => {
-      const x = padX + i * stepX;
-      const y = padTop + (1 - (val - min) / range) * (h - padTop - padBottom);
-      return [x, y];
-    });
-
-    const line = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-    const area = line + ` L${points[points.length-1][0].toFixed(1)},${h-padBottom} L${points[0][0].toFixed(1)},${h-padBottom} Z`;
-
-    // grid lines (4 horizontal)
-    const gridLines = [];
-    for (let i = 0; i <= 4; i++) {
-      const y = padTop + (i / 4) * (h - padTop - padBottom);
-      const val = max - (i/4) * range;
-      gridLines.push(`<line x1="${padX}" y1="${y}" x2="${w-padX}" y2="${y}" stroke="var(--border-soft)" stroke-width="1" stroke-dasharray="2,3" />`);
-      gridLines.push(`<text x="${w-padX+4}" y="${y+3}" fill="var(--text-dim)" font-size="9" font-family="'IBM Plex Mono', monospace">${val.toFixed(0)}</text>`);
-    }
-
-    const latestPoint = points[points.length-1];
-    const firstPoint = points[0];
-    const isUp = data[data.length-1] > data[0];
-    const strokeColor = isUp ? 'var(--up)' : 'var(--down)';
-    const fillId = 'fill-' + tf;
-
-    canvas.innerHTML = `
-      <svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="${isUp ? '#4ade80' : '#f87171'}" stop-opacity="0.25" />
-            <stop offset="100%" stop-color="${isUp ? '#4ade80' : '#f87171'}" stop-opacity="0.01" />
-          </linearGradient>
-        </defs>
-        ${gridLines.join('')}
-        <path d="${area}" fill="url(#${fillId})" />
-        <path d="${line}" fill="none" stroke="${strokeColor}" stroke-width="1.75" stroke-linejoin="round" stroke-linecap="round" />
-        <circle cx="${latestPoint[0]}" cy="${latestPoint[1]}" r="3" fill="${strokeColor}" />
-        <circle cx="${latestPoint[0]}" cy="${latestPoint[1]}" r="6" fill="${strokeColor}" opacity="0.2">
-          <animate attributeName="r" from="3" to="10" dur="1.5s" repeatCount="indefinite" />
-          <animate attributeName="opacity" from="0.3" to="0" dur="1.5s" repeatCount="indefinite" />
-        </circle>
-      </svg>
-    `;
-  }
-
-  tabs.forEach(tab => {
-    tab.addEventListener('click', function() {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      renderChart(tab.dataset.tf);
-    });
+  const script = document.createElement('script');
+  script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+  script.async = true;
+  script.type = 'text/javascript';
+  script.innerHTML = JSON.stringify({
+    autosize: true,
+    symbol: 'TVC:GOLD',
+    interval: 'D',                 // daily default
+    timezone: 'America/New_York',
+    theme: 'dark',
+    style: '1',                    // 1 = candlesticks
+    locale: 'en',
+    hide_side_toolbar: false,
+    allow_symbol_change: true,     // users can look up silver, bitcoin, etc.
+    save_image: false,
+    calendar: false,
+    hide_volume: false,
+    support_host: 'https://www.tradingview.com',
+    backgroundColor: 'rgba(19, 20, 23, 1)',    // matches --bg-raised
+    gridColor: 'rgba(35, 38, 43, 0.6)',         // matches --border
+    studies: [],                                // clean start — users add their own
+    withdateranges: true,                       // exposes the 1D/5D/1M/3M/6M/YTD/1Y/5Y/All range bar
+    details: false,
+    hotlist: false,
   });
-
-  renderChart('1W');
-  window.addEventListener('resize', () => {
-    const active = document.querySelector('.chart-tab.active');
-    if (active) renderChart(active.dataset.tf);
-  });
+  container.appendChild(script);
 })();
 
 /* ─── Mini sparklines for PM metals ─── */
