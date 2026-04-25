@@ -6,7 +6,7 @@
 declare(strict_types=1);
 
 // Change this to any long random string you like
-$SECRET = 'xk9m2p4q-corgano-4n8r7t1w';
+$SECRET = 'ivancicg-goldprice-cron-2026-04';
 
 if (($_GET['key'] ?? '') !== $SECRET) {
     http_response_code(403);
