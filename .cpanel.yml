@@ -27,6 +27,7 @@ deployment:
     - /bin/cp public/performance.html  $DEPLOYPATH
     - /bin/cp public/robots.txt        $DEPLOYPATH
     - /bin/cp public/api/dashboard.php $DEPLOYPATH/api/
+    - /bin/cp public/api/run-cron.php  $DEPLOYPATH/api/
 
     # ─── private files (above docroot, NOT web-accessible) ──────
     # Intentionally copies config.EXAMPLE.php only — never overwrites
@@ -38,4 +39,6 @@ deployment:
     - /bin/cp private/config.example.php  $PRIVATEPATH/config.example.php
     - /bin/cp private/cron/fetch-news.php $PRIVATEPATH/cron/
     - /bin/cp private/cron/tag-news.php   $PRIVATEPATH/cron/
+    - /bin/cp private/cron/build-seasonality.php $PRIVATEPATH/cron/
+    - /bin/sh -lc 'if [ ! -f "$PRIVATEPATH/data/seasonality.json" ]; then /usr/bin/php "$PRIVATEPATH/cron/build-seasonality.php" || /usr/local/bin/php "$PRIVATEPATH/cron/build-seasonality.php" || true; fi'
     - /bin/cp private/README.md           $PRIVATEPATH/
