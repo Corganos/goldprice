@@ -103,11 +103,30 @@ foreach ($feeds as $feed) {
 
         if (!$title || !$link) continue;
 
+        // Google News: each <item> has <source> with the real publisher name,
+        // and the <title> ends in " - Publisher". Extract the real publisher
+        // and clean up the title so we show "Reuters" not "Google News · Gold".
+        $displaySource = $feed['source'];
+        if (strpos($feed['url'], 'news.google.com') !== false) {
+            // Try <source> element first
+            if (isset($item->source) && (string)$item->source !== '') {
+                $displaySource = trim((string)$item->source);
+            }
+            // Strip the " - Publisher" suffix that Google News appends
+            // Handle both " - " and "\u00a0-\u00a0" separator variants
+            if (preg_match('/^(.+?)\s+[-–—]\s+([^-–—]+?)$/u', $title, $m)) {
+                $title = trim($m[1]);
+                if ($displaySource === $feed['source']) {
+                    $displaySource = trim($m[2]);  // fallback if <source> was missing
+                }
+            }
+        }
+
         $pubIso = $pub ? date('c', strtotime($pub) ?: time()) : gmdate('c');
 
         try {
             $insert->execute([
-                ':source'       => $feed['source'],
+                ':source'       => $displaySource,
                 ':headline'     => $title,
                 ':url'          => $link,
                 ':published_at' => $pubIso,

@@ -38,6 +38,16 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: public, max-age=30');
 header('Access-Control-Allow-Origin: *'); // lock down in production
 
+// Optional ?bust=1 — wipes all cache files and forces fresh fetches.
+// Useful when schema changes (new ticker groups, new fields) and cached
+// data is stale or malformed. Protected by Anthropic "is this you" sanity
+// (just a query param, but not widely known and doesn't expose any data).
+if (!empty($_GET['bust']) && is_dir($CONFIG['cache_dir'])) {
+    foreach (glob($CONFIG['cache_dir'] . '/*.json') ?: [] as $cacheFile) {
+        @unlink($cacheFile);
+    }
+}
+
 // ─── file cache helpers ────────────────────────────────────────────────
 function cache_get(string $key, int $ttl, string $dir): ?array {
     $f = $dir . '/' . md5($key) . '.json';
@@ -181,29 +191,245 @@ function fetch_metals_and_fx(array $cfg): ?array {
 }
 
 // ─── stocks via Finnhub ────────────────────────────────────────────────
+//
+// This fetcher has two key robustness properties:
+//
+//   1. PARALLEL FETCH — all 30+ Finnhub quote requests fire simultaneously
+//      via curl_multi_exec, not serially. A serial loop with 34 symbols and
+//      typical 300ms API latency would take ~10s, which risks hitting shared
+//      hosting's PHP max_execution_time (often 30s) when combined with the
+//      MetalpriceAPI + WordPress + SQLite work happening in the same request.
+//      Parallel cuts this to ~1-2s total.
+//
+//   2. PRESERVE LAST-KNOWN-GOOD — if a symbol group comes back empty (e.g.,
+//      Finnhub rate-limited us or had a blip), we DO NOT overwrite the
+//      existing cached values. The old data stays visible rather than
+//      vanishing. Only fresh successful responses replace cached values.
+//      This matters because the cache is served to the frontend, and an
+//      empty response would wipe the miners tables / indices / etc.
+//
 function fetch_stocks(array $cfg): array {
-    $cached = cache_get('stocks', $cfg['cache_stocks'], $cfg['cache_dir']);
-    if ($cached) return $cached;
+    $freshCache = cache_get('stocks', $cfg['cache_stocks'], $cfg['cache_dir']);
+    if ($freshCache) return $freshCache;
+
+    // For the "last known good" fallback we also read any existing stocks cache
+    // file ignoring TTL. This is our safety net when the current fetch fails.
+    $staleCache = cache_get_stale('stocks', $cfg['cache_dir']);
+    $previous   = is_array($staleCache) ? $staleCache : [];
 
     $key = urlencode($cfg['finnhub_key']);
-    $out = [];
+
+    // Build the full list of (group, symbol, url) tuples so curl_multi can
+    // fire them all at once. Crypto uses the same /quote endpoint in most
+    // cases — if it fails we silently drop that row (rare on Binance pairs).
+    $jobs = [];  // array of ['group'=>str, 'symbol'=>str, 'url'=>str, 'is_crypto'=>bool]
     foreach ($cfg['tickers'] as $group => $symbols) {
-        $out[$group] = [];
         foreach ($symbols as $sym) {
-            $q = http_json("https://finnhub.io/api/v1/quote?symbol={$sym}&token={$key}", 4);
-            if (!$q || !isset($q['c']) || $q['c'] == 0) continue;
-            $out[$group][] = [
-                'symbol'     => $sym,
+            $jobs[] = [
+                'group'     => $group,
+                'symbol'    => $sym,
+                'url'       => "https://finnhub.io/api/v1/quote?symbol=" . rawurlencode($sym) . "&token={$key}",
+                'is_crypto' => false,
+            ];
+        }
+    }
+    if (!empty($cfg['crypto_tickers'])) {
+        foreach ($cfg['crypto_tickers'] as $sym) {
+            $jobs[] = [
+                'group'     => 'crypto',
+                'symbol'    => $sym,
+                'url'       => "https://finnhub.io/api/v1/quote?symbol=" . rawurlencode($sym) . "&token={$key}",
+                'is_crypto' => true,
+            ];
+        }
+    }
+
+    // Fire all requests in parallel with curl_multi.
+    $multi = curl_multi_init();
+    $handles = [];
+    foreach ($jobs as $i => $job) {
+        $ch = curl_init($job['url']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);          // per-request cap
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+        curl_setopt($ch, CURLOPT_USERAGENT, 'GoldTerminal/1.0');
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
+        curl_multi_add_handle($multi, $ch);
+        $handles[$i] = $ch;
+    }
+    // Drive the multi loop until all are done. Overall wall-clock cap is
+    // roughly the slowest request (~5s), not the sum of them. We also add
+    // a hard wall-clock cap of 12 seconds as belt-and-suspenders.
+    $hardDeadline = microtime(true) + 12.0;
+    $running = null;
+    do {
+        curl_multi_exec($multi, $running);
+        curl_multi_select($multi, 0.5);
+    } while ($running > 0 && microtime(true) < $hardDeadline);
+
+    // Collect responses
+    $out = [];
+    foreach ($cfg['tickers'] as $group => $_) $out[$group] = [];
+    $out['crypto'] = [];
+
+    foreach ($jobs as $i => $job) {
+        $ch   = $handles[$i];
+        $body = curl_multi_getcontent($ch);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_multi_remove_handle($multi, $ch);
+        curl_close($ch);
+        if ($code !== 200 || !$body) continue;
+        $q = json_decode($body, true);
+        if (!is_array($q) || !isset($q['c']) || $q['c'] == 0) continue;
+
+        if ($job['is_crypto']) {
+            $out['crypto'][] = [
+                'symbol'     => $job['symbol'],
+                'price'      => round((float)$q['c'], 2),
+                'change'     => round((float)($q['d']  ?? 0), 2),
+                'change_pct' => round((float)($q['dp'] ?? 0), 2),
+            ];
+        } else {
+            $out[$job['group']][] = [
+                'symbol'     => $job['symbol'],
                 'price'      => round((float)$q['c'], 2),
                 'change'     => round((float)($q['d']  ?? 0), 2),
                 'change_pct' => round((float)($q['dp'] ?? 0), 2),
                 'high'       => round((float)($q['h']  ?? 0), 2),
                 'low'        => round((float)($q['l']  ?? 0), 2),
             ];
-            usleep(60000); // ~60ms between calls — stay comfortably under 60/min free tier
         }
     }
+    curl_multi_close($multi);
+
+    // ── PRESERVE LAST-KNOWN-GOOD ──
+    // For any group that came back empty this cycle but had data last cycle,
+    // keep the previous values. This stops a transient Finnhub blip from
+    // wiping the frontend tables. A group only updates when we get fresh data.
+    foreach ($out as $group => $rows) {
+        if (empty($rows) && !empty($previous[$group])) {
+            $out[$group] = $previous[$group];
+        }
+    }
+
     cache_set('stocks', $out, $cfg['cache_dir']);
+    return $out;
+}
+
+// Read a cache file ignoring its TTL — used for last-known-good fallback.
+// Matches the format of cache_get/cache_set (JSON-encoded, .json extension).
+// Returns null if the file doesn't exist or can't be decoded.
+function cache_get_stale(string $key, string $dir): ?array {
+    $path = rtrim($dir, '/') . '/' . md5($key) . '.json';
+    if (!is_file($path)) return null;
+    $d = @json_decode((string)file_get_contents($path), true);
+    return is_array($d) ? $d : null;
+}
+
+// ─── macro data (real indices, yields, commodities) via stooq.com ─────
+//
+// Finnhub's free tier doesn't cover indices (SPX, DJIA, NDX), commodity
+// futures (WTI), or Treasury yields (^TNX). Without a real source we'd be
+// forced to show ETF proxy prices (SPY=704, DIA=491, UUP=27) alongside
+// labels that imply the underlying ("S&P 500", "Dow Jones", "US Dollar"),
+// which is confusing at best.
+//
+// Tried Yahoo's v7 quote endpoint first — they block server-to-server
+// requests from shared hosting IPs. Stooq.com is a long-running Polish
+// financial data site with a free CSV API that has worked reliably for
+// 20+ years. No auth, no cookies, no API key.
+//
+// We emit NORMALIZED symbols (SPX, DJIA, NDX, DXY, WTI, US10Y) so the
+// frontend doesn't need to care which data source populated them. If we
+// later swap stooq for something else, the frontend unchanged.
+//
+// CHANGE SEMANTICS: stooq's CSV gives us today's OHLC. We compute change
+// as (close - open) / open, which is intraday change (where we are now
+// vs where we opened). This differs from the traditional "vs prior close"
+// change but is still real, meaningful data that updates through the day.
+// Getting prior-close would require 2 stooq calls per symbol.
+//
+function fetch_macro(array $cfg): array {
+    $cached = cache_get('macro', $cfg['cache_stocks'] ?? 180, $cfg['cache_dir']);
+    if ($cached) return $cached;
+
+    // stooq symbol (lowercase) → normalized output symbol + display + formatting
+    $symbols = [
+        '^spx' => ['out_sym' => 'SPX',   'name' => 'S&P 500',      'decimals' => 2],
+        '^dji' => ['out_sym' => 'DJIA',  'name' => 'Dow Jones',    'decimals' => 0],
+        '^ndx' => ['out_sym' => 'NDX',   'name' => 'Nasdaq 100',   'decimals' => 2],
+        'dx.f' => ['out_sym' => 'DXY',   'name' => 'US Dollar',    'decimals' => 2],
+        'cl.f' => ['out_sym' => 'WTI',   'name' => 'WTI Crude',    'decimals' => 2],
+        '^tnx' => ['out_sym' => 'US10Y', 'name' => 'US 10Y Yield', 'decimals' => 2, 'suffix' => '%'],
+    ];
+
+    $list = implode(',', array_keys($symbols));
+    // f=sd2t2ohlcv means: Symbol, Date(YYYY-MM-DD), Time, Open, High, Low, Close, Volume
+    // h = include header row
+    // e=csv = CSV output
+    $url = 'https://stooq.com/q/l/?s=' . $list . '&f=sd2t2ohlcv&h&e=csv';
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    $body = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code !== 200 || !$body) {
+        $stale = cache_get_stale('macro', $cfg['cache_dir']);
+        return is_array($stale) ? $stale : [];
+    }
+
+    // Parse CSV response:
+    //   Symbol,Date,Time,Open,High,Low,Close,Volume
+    //   ^SPX,2026-04-21,22:00:04,7117.05,7147.52,7046.85,7064.01,0
+    $lines = explode("\n", trim($body));
+    if (count($lines) < 2) {
+        $stale = cache_get_stale('macro', $cfg['cache_dir']);
+        return is_array($stale) ? $stale : [];
+    }
+    array_shift($lines);  // discard header
+
+    $out = [];
+    foreach ($lines as $line) {
+        $parts = str_getcsv($line);
+        if (count($parts) < 7) continue;
+
+        $sym_raw = strtolower(trim($parts[0]));
+        if (!isset($symbols[$sym_raw])) continue;
+        $meta = $symbols[$sym_raw];
+
+        $open_str  = trim($parts[3]);
+        $close_str = trim($parts[6]);
+
+        // stooq returns "N/D" for cells with no data (e.g., overnight, weekend)
+        if ($open_str === 'N/D' || $close_str === 'N/D') continue;
+        if (!is_numeric($open_str) || !is_numeric($close_str)) continue;
+
+        $open  = (float)$open_str;
+        $close = (float)$close_str;
+        $change     = $close - $open;
+        $change_pct = $open > 0 ? ($change / $open * 100) : 0;
+
+        $out[] = [
+            'symbol'     => $meta['out_sym'],
+            'display'    => $meta['name'],
+            'price'      => round($close, $meta['decimals']),
+            'change'     => round($change, 2),
+            'change_pct' => round($change_pct, 2),
+            'suffix'     => $meta['suffix'] ?? '',
+        ];
+    }
+
+    if (empty($out)) {
+        $stale = cache_get_stale('macro', $cfg['cache_dir']);
+        if (is_array($stale) && !empty($stale)) return $stale;
+    }
+
+    cache_set('macro', $out, $cfg['cache_dir']);
     return $out;
 }
 
@@ -437,6 +663,35 @@ if (empty($stocks['miners_gold']) && empty($stocks['miners_silver'])) {
     $warnings[] = 'Stock feed partially unavailable.';
 }
 
+// Stooq: real indices (SPX/DJIA/NDX), DXY, WTI, US10Y yield.
+// This replaces the Finnhub ETF proxies (SPY/DIA/QQQ/UUP/USO/IEF) which
+// were honest but confusing (SPY≈$704, labeled "S&P 500" implies ~5,682).
+$stocks['macro'] = fetch_macro($CONFIG);
+
+// Stooq doesn't serve crypto, so we graft BTC onto the macro array from the
+// Finnhub crypto feed. This gives the frontend a single uniform list for
+// the Correlated Markets panel, with consistent schema (display/symbol/suffix).
+if (!empty($stocks['crypto'])) {
+    foreach ($stocks['crypto'] as $c) {
+        $sym = $c['symbol'] ?? '';
+        if (stripos($sym, 'BTC') !== false && isset($c['price'])) {
+            $stocks['macro'][] = [
+                'symbol'     => 'BTC',
+                'display'    => 'Bitcoin',
+                'price'      => $c['price'],
+                'change'     => $c['change']     ?? null,
+                'change_pct' => $c['change_pct'] ?? null,
+                'suffix'     => '',
+            ];
+            break;
+        }
+    }
+}
+
+if (empty($stocks['macro'])) {
+    $warnings[] = 'Macro market feed unavailable — Correlated Markets may be empty.';
+}
+
 $news = fetch_news($CONFIG, 20);
 if (empty($news)) {
     $warnings[] = 'News database empty — has the cron run yet?';
@@ -445,6 +700,18 @@ if (empty($news)) {
 $corgano_articles = fetch_corgano_articles($CONFIG);
 if (empty($corgano_articles)) {
     $warnings[] = 'Corgano WordPress feed empty or unreachable — commentary panel will show fallback content.';
+}
+
+$seasonalityPath = rtrim($CONFIG['data_dir'], '/\\') . '/seasonality.json';
+$seasonality = null;
+if (is_file($seasonalityPath)) {
+    $seasonality = @json_decode((string)file_get_contents($seasonalityPath), true);
+    if (!is_array($seasonality)) {
+        $seasonality = null;
+    }
+}
+if (empty($seasonality['months'])) {
+    $warnings[] = 'Seasonality snapshot missing — has the monthly build-seasonality cron run yet?';
 }
 
 // KGX needs live metals+fx — skip entirely in fallback mode
@@ -458,6 +725,7 @@ $payload = [
     'stocks'           => $stocks,
     'news'             => $news,
     'corgano_articles' => $corgano_articles,
+    'seasonality'      => $seasonality,
     'kgx'              => $kgx,
     'fallback_active'  => $fallback_active,
     'fallback_charts'  => $CONFIG['fallback_charts'] ?? [],

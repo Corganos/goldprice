@@ -47,15 +47,31 @@ return [
     //   Basic Plus allows 50,000/month → ~6,800 headroom for cold starts
     //   and manual refreshes. Safe.
     'cache_metals'   => 60,
-    'cache_stocks'   => 60,
+    'cache_stocks'   => 180,  // 3 min — reduces Finnhub API pressure; stocks don't tick that fast
     'cache_news'     => 300,
 
     // ── which tickers to fetch from Finnhub ──────────────
     'tickers' => [
-        'miners_gold'   => ['NEM','GOLD','AEM','FNV','WPM','KGC','AU','GFI'],
-        'miners_silver' => ['PAAS','AG','HL','SVM','FSM','EXK','MAG','SSRM'],
-        'correlated'    => ['SPY','QQQ','DIA','GLD','SLV','USO','UUP'],
+        // Individual gold miners (displayed in TOP GOLD MINERS table)
+        'miners_gold'     => ['NEM','GOLD','AEM','FNV','WPM','KGC','AU','GFI'],
+
+        // Individual silver miners (displayed in TOP SILVER MINERS table)
+        'miners_silver'   => ['PAAS','AG','HL','SVM','FSM','EXK','MAG','SSRM'],
+
+        // Mining-industry ETFs (displayed in MINING INDICES panel).
+        // Core set — these 5 cover seniors, juniors, silver-miners, silver-juniors,
+        // and royalty/streaming. Drops the 3 Sprott variants (SGDM/SGDJ/RING)
+        // to keep Finnhub call count manageable on shared hosting.
+        'mining_indices'  => ['GDX','GDXJ','SIL','SILJ','GOAU'],
+
+        // Correlated macro markets (displayed in CORRELATED MARKETS panel).
+        // DIA→DJIA, SPY→SPX, QQQ→NASDAQ, UUP→DXY (dollar), USO→WTI (oil),
+        // IEF→US10Y (inverse bond proxy).
+        'correlated'      => ['SPY','DIA','QQQ','UUP','USO','IEF'],
     ],
+
+    // Crypto tickers — Finnhub accepts these via /quote with BINANCE: prefix
+    'crypto_tickers'      => ['BINANCE:BTCUSDT'],
 
     // ── FX table: which currencies to show gold priced in ─
     'fx_currencies' => [
@@ -128,11 +144,41 @@ return [
     'fallback_link' => 'http://www.kitco.com/connecting.html',
 
     // ── RSS sources for the news cron ────────────────────
+    // We use Google News RSS as the primary aggregator. Major publishers
+    // (Kitco, Mining.com, Reuters, Bloomberg) have made direct RSS access
+    // unreliable — either killing feeds outright or putting them behind
+    // Cloudflare. Google News bypasses both problems: it returns a real
+    // feed from dozens of publishers per query, no auth, no rate limit.
+    //
+    // Each entry below is a Google News search. URL format:
+    //   https://news.google.com/rss/search?q=QUERY&hl=en-US&gl=US&ceid=US:en
+    //
+    // Tips:
+    //   - `when:3d` restricts to last 3 days
+    //   - `when:1d` for daily-briefing feeds
+    //   - Use OR for broader topics, AND for narrower ones
+    //   - URL-encode spaces as + and double-quotes as %22
+    //
+    // The fetcher de-dupes by URL, so overlapping queries won't produce dupes.
+    // One Google News URL typically returns 20–100 items, so 4–6 queries
+    // here produce plenty of diverse headlines.
     'rss_feeds' => [
-        ['source' => 'Kitco',         'url' => 'https://www.kitco.com/news/category/mining/rss'],
-        ['source' => 'Mining.com',    'url' => 'https://www.mining.com/tag/precious-metals/feed/'],
-        ['source' => 'Northern Miner','url' => 'https://www.northernminer.com/category/precious-metals/feed/'],
-        ['source' => 'BullionVault',  'url' => 'https://www.bullionvault.com/gold-news/rss'],
-        // add more RSS sources as you find them
+        // Primary: broad precious-metals aggregation
+        ['source' => 'Google News · Gold',
+         'url'    => 'https://news.google.com/rss/search?q=gold+price+OR+%22gold+market%22+when:3d&hl=en-US&gl=US&ceid=US:en'],
+        ['source' => 'Google News · Silver',
+         'url'    => 'https://news.google.com/rss/search?q=silver+price+OR+%22silver+market%22+when:3d&hl=en-US&gl=US&ceid=US:en'],
+        ['source' => 'Google News · Central Banks',
+         'url'    => 'https://news.google.com/rss/search?q=%22central+bank%22+gold+buying+OR+reserves+when:7d&hl=en-US&gl=US&ceid=US:en'],
+        ['source' => 'Google News · Mining',
+         'url'    => 'https://news.google.com/rss/search?q=%22gold+mining%22+OR+%22silver+mining%22+when:3d&hl=en-US&gl=US&ceid=US:en'],
+        ['source' => 'Google News · Macro',
+         'url'    => 'https://news.google.com/rss/search?q=%22gold%22+Fed+OR+inflation+OR+dollar+when:2d&hl=en-US&gl=US&ceid=US:en'],
+
+        // Secondary direct feeds that are known-working from our testing:
+        ['source' => 'Northern Miner',
+         'url'    => 'https://www.northernminer.com/feed/'],
+        ['source' => 'Intl Mining',
+         'url'    => 'https://im-mining.com/feed/'],
     ],
 ];

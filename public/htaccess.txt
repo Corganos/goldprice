@@ -1,0 +1,59 @@
+# ═══════════════════════════════════════════════════════════════════════
+# .htaccess for goldprice.corgano.com
+#
+# Enables:
+#   1. Server Side Includes (SSI) in .html files — for shared footer/header
+#   2. Cache headers for static assets (performance)
+#   3. Compression (if mod_deflate is available)
+#   4. Basic security headers
+# ═══════════════════════════════════════════════════════════════════════
+
+# ── Enable Server Side Includes ──────────────────────────────────────
+# This lets us use <!--#include virtual="/_partials/..." --> in .html pages,
+# so the mega footer can live in one file and be included by every page.
+Options +Includes
+AddType text/html .html
+AddOutputFilter INCLUDES .html
+
+# ── Prevent direct access to partials (optional but clean) ──────────
+# Users shouldn't be loading /_partials/mega-footer.html directly since
+# it has no <html> wrapper. Also blocks accidental indexing by Google.
+<FilesMatch "^_">
+    Options -Indexes
+</FilesMatch>
+
+# ── Browser caching for static assets ────────────────────────────────
+# Images and fonts: long cache (they rarely change)
+# CSS/JS: short cache (they may update with deploys)
+# HTML: no cache (always fresh content)
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType text/css "access plus 1 hour"
+    ExpiresByType application/javascript "access plus 1 hour"
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# ── Gzip compression ─────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript application/json application/rss+xml application/atom+xml
+</IfModule>
+
+# ── Basic security headers ──────────────────────────────────────────
+<IfModule mod_headers.c>
+    # Prevent clickjacking (our site shouldn't be iframed)
+    Header always set X-Frame-Options "SAMEORIGIN"
+    # Prevent MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    # Referrer policy — send origin-only on cross-origin (protects user privacy slightly)
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ── Custom error pages (optional — create 404.html if you want) ─────
+# ErrorDocument 404 /404.html

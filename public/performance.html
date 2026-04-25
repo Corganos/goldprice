@@ -21,9 +21,11 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 
+<!-- Shared chrome styles (from index.html: CSS vars, network strip, topbar, ticker, mega footer) -->
 <style>
+
   :root[data-theme="dark"] {
     --bg: #0a0b0d;
     --bg-raised: #131417;
@@ -38,53 +40,1350 @@
     --gold-bright: #f4c969;
     --gold-dim: #8a7347;
     --up: #4ade80;
-    --up-strong: #22c55e;
-    --up-muted: rgba(74, 222, 128, 0.12);
+    --up-bg: rgba(74, 222, 128, 0.1);
     --down: #f87171;
-    --down-strong: #dc2626;
-    --down-muted: rgba(248, 113, 113, 0.12);
+    --down-bg: rgba(248, 113, 113, 0.1);
+    --flat: #8a8e95;
+    --link: #7dd3fc;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #faf7f0;
+    --bg-raised: #ffffff;
+    --bg-card: #ffffff;
+    --bg-hover: #f3ede0;
+    --border: #e5ddc8;
+    --border-soft: #eee6d0;
+    --text: #1a1510;
+    --text-muted: #6b6152;
+    --text-dim: #9a8e7a;
+    --gold: #b8893a;
+    --gold-bright: #c9a961;
+    --gold-dim: #8a7347;
+    --up: #15803d;
+    --up-bg: rgba(21, 128, 61, 0.08);
+    --down: #b91c1c;
+    --down-bg: rgba(185, 28, 28, 0.08);
+    --flat: #6b6152;
+    --link: #0369a1;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
   body {
-    font-family: 'IBM Plex Sans', -apple-system, system-ui, sans-serif;
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text);
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 13px;
+    line-height: 1.4;
     -webkit-font-smoothing: antialiased;
     min-height: 100vh;
-    background-image:
-      radial-gradient(ellipse 800px 400px at 50% 0%, rgba(232,181,71,0.06), transparent 60%);
-    background-attachment: fixed;
   }
   a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
 
-  /* ─── top bar (simplified) ─── */
+  /* ─── monospace utilities ─── */
+  .mono { font-family: 'IBM Plex Mono', monospace; font-variant-numeric: tabular-nums; }
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .flat { color: var(--flat); }
+
+  /* ─── top bar ─── */
   .topbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 0.85rem 1.5rem;
+    gap: 1.5rem;
+    padding: 0.65rem 1.25rem;
     background: var(--bg-raised);
     border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
   .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+  }
+  .brand-mark {
     font-family: 'IBM Plex Serif', serif;
     font-style: italic;
     font-weight: 500;
-    font-size: 1.2rem;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
   }
-  .brand em { color: var(--gold); font-style: normal; }
-  .breadcrumbs {
+  .brand-mark em { color: var(--gold); font-style: normal; }
+  .brand-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .topnav {
+    display: flex;
+    gap: 1rem;
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .topnav a { transition: color 0.15s; padding: 2px 0; }
+  .topnav a:hover { color: var(--gold); }
+  .topnav a.active { color: var(--text); border-bottom: 1px solid var(--gold); }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--up);
+    animation: livepulse 2s ease-in-out infinite;
+  }
+  @keyframes livepulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
+    50% { opacity: 0.5; box-shadow: 0 0 0 3px rgba(74, 222, 128, 0); }
+  }
+  .status-label { color: var(--text-dim); }
+  .status-value { color: var(--text); font-weight: 500; }
+  .countdown-value { color: var(--gold); }
+
+  .icon-btn {
+    width: 28px; height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .icon-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .refresh-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+  .refresh-btn svg { width: 11px; height: 11px; }
+
+  select.refresh-select {
+    padding: 5px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    border-radius: 2px;
+    appearance: none;
+    padding-right: 22px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='%238a8e95'><path d='M0 0l5 6 5-6z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 8px;
+  }
+
+  .ai-trigger {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: #1a1510;
+    border: none;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    transition: transform 0.15s;
+  }
+  .ai-trigger:hover { transform: translateY(-1px); }
+  .ai-trigger svg { width: 12px; height: 12px; }
+
+  /* ─── ticker ─── */
+  .ticker-strip {
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-track {
+    display: inline-flex;
+    gap: 2.25rem;
+    padding: 6px 0;
+    animation: ticker 80s linear infinite;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+  }
+  .ticker-item { color: var(--text-muted); }
+  .ticker-item strong {
+    color: var(--text);
+    font-weight: 600;
+    margin-right: 6px;
+    letter-spacing: 0.03em;
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ─── grid layout ─── */
+  .board {
+    padding: 0.75rem;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.75rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+  .panel-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  .panel-title .gold-dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    background: var(--gold);
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .panel-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .panel-body { padding: 10px; flex: 1; }
+  .panel-body.tight { padding: 0; }
+
+  /* ─── col spans ─── */
+  .c1  { grid-column: span 1; } .c2  { grid-column: span 2; }
+  .c3  { grid-column: span 3; } .c4  { grid-column: span 4; }
+  .c5  { grid-column: span 5; } .c6  { grid-column: span 6; }
+  .c7  { grid-column: span 7; } .c8  { grid-column: span 8; }
+  .c9  { grid-column: span 9; } .c10 { grid-column: span 10; }
+  .c12 { grid-column: span 12; }
+
+  /* ─── spot hero panel ─── */
+  .spot-hero { padding: 12px 14px; }
+  .spot-symbol {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-transform: uppercase;
+  }
+  .spot-price {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 2.75rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin: 6px 0 4px;
+    font-variant-numeric: tabular-nums;
+    position: relative;
+    transition: color 0.4s;
+  }
+  .spot-price.flash-up { color: var(--up); }
+  .spot-price.flash-down { color: var(--down); }
+  .spot-change {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+  }
+  .spot-change .arrow { margin-right: 2px; }
+
+  .spot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .spot-kv { display: flex; flex-direction: column; gap: 2px; }
+  .spot-kv-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .spot-kv-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ─── chart panel (TradingView embed) ─── */
+  .chart-provider {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-left: 1px solid var(--border-soft);
+  }
+  .tv-chart-wrap {
+    width: 100%;
+    padding: 0;
+    background: var(--bg-raised);
+  }
+  .tv-chart-container {
+    position: relative;
+    width: 100%;
+    height: 560px;
+    /* TradingView's iframe fills this — we just reserve the space. */
+  }
+  .tv-chart-container > div,
+  .tv-chart-container iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: 0;
+  }
+  @media (max-width: 900px) {
+    .tv-chart-container { height: 420px; }
+  }
+
+  /* ─── metals stack (silver/plat/pall/rhodium) ─── */
+  .metals-stack { display: flex; flex-direction: column; }
+  .metal-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .metal-row:last-child { border-bottom: none; }
+  .metal-row:hover { background: var(--bg-hover); }
+  .metal-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    min-width: 60px;
+  }
+  .metal-name strong { color: var(--text); display: block; font-weight: 500; font-size: 12.5px; letter-spacing: 0.02em; }
+  .metal-spark { height: 28px; }
+  .metal-vals { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  .metal-price { font-size: 13.5px; font-weight: 500; color: var(--text); }
+  .metal-chg { font-size: 10.5px; margin-top: 1px; }
+
+  /* ─── KGI attribution ─── */
+  .kgi-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px dashed var(--border-soft);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+  }
+  .kgi-row:last-child { border-bottom: none; font-weight: 600; padding-top: 10px; }
+  .kgi-row-label { color: var(--text-muted); }
+  .kgi-row-value { font-variant-numeric: tabular-nums; }
+  .kgi-bar {
+    height: 6px;
+    background: var(--bg-card);
+    border-radius: 1px;
+    margin-top: 10px;
+    display: flex;
+    overflow: hidden;
+  }
+  .kgi-bar-seg {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+  }
+  .kgi-bar-usd { background: linear-gradient(90deg, var(--down), #c74c4c); flex-basis: 10%; }
+  .kgi-bar-buyers { background: linear-gradient(90deg, #4a9d60, var(--up)); flex-basis: 90%; }
+  .kgi-summary {
+    margin-top: 10px;
+    padding: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-left: 2px solid var(--gold);
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 11.5px;
+    font-style: italic;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  /* ─── ratios ─── */
+  .ratio-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border-soft);
+  }
+  .ratio-cell {
+    background: var(--bg-raised);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ratio-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .ratio-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .ratio-chg { font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
+
+  /* ─── generic data table ─── */
+  table.dt {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+  }
+  table.dt th {
+    text-align: left;
+    padding: 7px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-soft);
+    position: sticky;
+    top: 0;
+  }
+  table.dt th.num, table.dt td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.dt td {
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
+  }
+  table.dt tr:last-child td { border-bottom: none; }
+  table.dt tr:hover td { background: var(--bg-hover); }
+  table.dt .sym {
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.03em;
+  }
+  table.dt .name {
+    color: var(--text-muted);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+  }
+
+  /* ─── news feed ─── */
+  .news-list { max-height: 480px; overflow-y: auto; }
+  .news-list::-webkit-scrollbar { width: 6px; }
+  .news-list::-webkit-scrollbar-track { background: transparent; }
+  .news-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .news-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    align-items: start;
+    cursor: pointer;
+  }
+  .news-item:hover { background: var(--bg-hover); }
+  .news-item:hover .news-head { color: var(--gold); }
+  .news-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+  }
+  .news-source { color: var(--gold); margin-right: 6px; }
+  .news-head {
+    font-size: 12.5px;
+    line-height: 1.35;
+    color: var(--text);
+    transition: color 0.15s;
+    font-weight: 400;
+  }
+  .news-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 5px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 2px;
+    white-space: nowrap;
+    align-self: start;
+  }
+
+  /* ─── commentary list ─── */
+  .cmt-item {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-soft);
+    cursor: pointer;
+  }
+  .cmt-item:hover { background: var(--bg-hover); }
+  .cmt-item:hover .cmt-title { color: var(--gold); }
+  .cmt-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 13px;
+    line-height: 1.25;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 3px;
+    transition: color 0.15s;
+  }
+  .cmt-byline {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+  }
+  .cmt-byline .author { color: var(--text-muted); }
+
+  /* ─── lease rates / london fix compact tables ─── */
+  .mini-table { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .mini-table th, .mini-table td {
+    padding: 4px 8px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .mini-table th:first-child, .mini-table td:first-child { text-align: left; color: var(--text-muted); }
+  .mini-table th {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mini-table td { border-bottom: 1px solid var(--border-soft); color: var(--text); }
+  .mini-table tr:last-child td { border-bottom: none; }
+
+  /* ─── featured miners (ad-style) ─── */
+  .featured-list { padding: 4px 0; }
+  .featured-row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-size: 11.5px;
+  }
+  .featured-row:hover { background: var(--bg-hover); }
+  .featured-row:hover .featured-name { color: var(--gold); }
+  .featured-check {
+    width: 11px; height: 11px;
+    border: 1px solid var(--border);
+    border-radius: 1px;
+    background: var(--bg-card);
+  }
+  .featured-name { color: var(--text); transition: color 0.15s; }
+  .featured-ticker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* ─── footer ─── */
+  footer {
+    padding: 2rem 1.25rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-raised);
+    margin-top: 1rem;
+  }
+  .foot-grid {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .foot-brand-line {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .foot-brand-line strong { color: var(--gold); font-style: normal; font-weight: 500; }
+  .foot-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; max-width: 40ch; }
+  .foot-col h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .foot-col ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .foot-col a { font-size: 12px; color: var(--text-muted); transition: color 0.15s; }
+  .foot-col a:hover { color: var(--gold); }
+  .foot-bottom {
+    max-width: 1600px;
+    margin: 1.5rem auto 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+  }
+
+  /* ─── AI widget ─── */
+  .ai-widget {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    z-index: 200;
+  }
+  .ai-fab {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--gold-bright));
+    color: #1a1510;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(232, 181, 71, 0.3), 0 0 0 4px rgba(232, 181, 71, 0.12);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .ai-fab:hover { transform: scale(1.08); }
+  .ai-fab svg { width: 22px; height: 22px; }
+  .ai-fab.open { transform: rotate(45deg); }
+
+  .ai-panel {
+    position: absolute;
+    bottom: 64px;
+    right: 0;
+    width: 360px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    overflow: hidden;
+    display: none;
+    flex-direction: column;
+  }
+  .ai-panel.open { display: flex; animation: slideUp 0.25s ease; }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .ai-panel-head {
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .ai-panel-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .ai-panel-title em { font-style: italic; color: var(--gold); }
+  .ai-panel-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .ai-service-row {
+    display: flex;
+    gap: 4px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-card);
+  }
+  .ai-service-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    align-self: center;
+    margin-right: 6px;
+  }
+  .ai-svc-btn {
+    padding: 4px 10px;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .ai-svc-btn:hover { color: var(--text); border-color: var(--gold-dim); }
+  .ai-svc-btn.active { color: #1a1510; background: var(--gold); border-color: var(--gold); font-weight: 600; }
+
+  .ai-prompts { padding: 10px 14px; }
+  .ai-prompts h5 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .ai-prompt-list { display: flex; flex-direction: column; gap: 4px; }
+  .ai-prompt-btn {
+    text-align: left;
+    padding: 8px 10px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 2px;
+    font-size: 12px;
+    color: var(--text);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ai-prompt-btn:hover {
+    border-color: var(--gold-dim);
+    background: var(--bg-hover);
+  }
+  .ai-prompt-btn svg {
+    width: 11px; height: 11px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+  .ai-prompt-btn:hover svg { color: var(--gold); transform: translateX(2px); }
+
+  .ai-custom {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-soft);
+    background: var(--bg-card);
+    display: flex;
+    gap: 6px;
+  }
+  .ai-custom input {
+    flex: 1;
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 10px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+  }
+  .ai-custom input:focus { outline: none; border-color: var(--gold-dim); }
+  .ai-custom button {
+    padding: 7px 12px;
+    background: var(--gold);
+    color: #1a1510;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ─── Corgano in-house commentary badges ─── */
+  .cmt-corgano {
+    position: relative;
+    border-left: 2px solid var(--gold);
+  }
+  .cmt-corgano:hover { background: var(--bg-hover); }
+  .cmt-corgano-badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8.5px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    padding: 1px 5px;
+    border: 1px solid var(--gold-dim);
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .cmt-category {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-right: 6px;
+  }
+  .cmt-excerpt {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--text-muted);
+    margin-top: 4px;
+    margin-bottom: 4px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ─── bid/ask compact strip ─── */
+  .bid-ask-strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .bid-ask-strip em {
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 9.5px;
+    margin-right: 4px;
+  }
+  .bid-ask-strip b { color: var(--text); font-weight: 500; }
+
+  /* ─── per-unit conversion strip ─── */
+  .unit-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border-soft);
+    border: 1px solid var(--border-soft);
+    margin-bottom: 14px;
+  }
+  .unit-cell {
+    background: var(--bg-raised);
+    padding: 8px 4px;
+    text-align: center;
+  }
+  .unit-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 3px;
+  }
+  .unit-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ─── multi-timeframe performance table ─── */
+  .perf-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .perf-table th {
+    padding: 6px 6px 6px 0;
+    text-align: left;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .perf-table th.num, .perf-table td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .perf-table td {
+    padding: 5px 6px 5px 0;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text);
+  }
+  .perf-table td:first-child {
+    color: var(--text-muted);
+    font-size: 10.5px;
+  }
+  .perf-table tr:last-child td { border-bottom: none; }
+  .perf-table tr:hover td { background: var(--bg-hover); }
+
+  /* ─── fallback-mode styles ─── */
+  .fallback-chart {
+    display: block;
+    padding: 1rem;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 3px;
+    text-align: center;
+    text-decoration: none;
+    transition: border-color 0.2s;
+  }
+  .fallback-chart:hover { border-color: var(--gold-dim); }
+  .fallback-chart img {
+    max-width: 100%;
+    height: auto;
+    filter: saturate(0.85);
+    border-radius: 2px;
+  }
+  .fallback-attribution {
+    display: block;
+    margin-top: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--text-dim);
   }
-  .breadcrumbs a:hover { color: var(--gold); }
-  .breadcrumbs .sep { margin: 0 8px; color: var(--text-dim); }
+  .fallback-pill {
+    background: rgba(248, 113, 113, 0.08) !important;
+    border-color: var(--down) !important;
+  }
+  .fallback-pill .status-label { color: var(--down) !important; }
+  .fallback-pill .fallback-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--down);
+    animation: livepulse 1.5s ease-in-out infinite;
+  }
+  .fallback-reason {
+    color: var(--text-dim);
+    font-size: 9.5px;
+    text-transform: lowercase;
+    letter-spacing: 0.05em;
+  }
+  .stale { opacity: 0.55; }
+
+  /* ─── CORGANO NETWORK STRIP (top of page) ─── */
+  .network-strip {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 1.5rem;
+    height: 30px;
+    background: #0d0e11;
+    border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .network-strip-label {
+    color: var(--gold);
+    margin-right: 1.25rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    letter-spacing: 0.22em;
+  }
+  .network-strip-label::before {
+    content: '◆';
+    margin-right: 6px;
+    color: var(--gold-dim);
+  }
+  .network-strip nav {
+    display: flex;
+    gap: 0;
+    flex-shrink: 0;
+  }
+  .network-strip nav a {
+    position: relative;
+    padding: 0 14px;
+    line-height: 30px;
+    color: var(--text-dim);
+    transition: color 0.15s;
+  }
+  .network-strip nav a:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 1px;
+    background: var(--border);
+  }
+  .network-strip nav a:hover { color: var(--text); }
+  .network-strip nav a.current { color: var(--gold); }
+  .network-strip nav a.current::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 0;
+    height: 2px;
+    background: var(--gold);
+  }
+  .network-strip nav a.future {
+    color: var(--text-dim);
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .network-strip nav a.future::after-text {
+    content: ' soon';
+    color: var(--gold-dim);
+  }
+  .network-strip-tag {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 9.5px;
+    flex-shrink: 0;
+  }
+
+  /* ─── cross-link indicators on data rows ─── */
+  a.ticker-item {
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+  a.ticker-item:hover {
+    color: var(--gold) !important;
+    background: var(--bg-hover);
+  }
+  a.ticker-item:hover strong { color: var(--gold); }
+  .metal-row.linkable {
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .metal-row.linkable:hover { background: var(--bg-hover); }
+  .metal-row.linkable:hover .metal-name strong { color: var(--gold); }
+  .metal-row.linkable::after {
+    content: '→';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 11px;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .metal-row.linkable { position: relative; padding-right: 20px; }
+  .metal-row.linkable:hover::after { opacity: 1; color: var(--gold); transform: translateY(-50%) translateX(3px); }
+
+  /* ─── ratios panel: "see silver →" subtle inline CTA ─── */
+  .ratio-cell .ratio-cross {
+    display: block;
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    transition: color 0.15s;
+  }
+  .ratio-cell .ratio-cross:hover { color: var(--gold); }
+  .ratio-cell .ratio-cross::after { content: ' →'; }
+
+  /* ─── CORGANO NETWORK STRIP END ─── */
+
+  /* ─── MEGA FOOTER ─── */
+  .mega-footer {
+    margin-top: 4rem;
+    background: var(--bg-raised);
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 1.5rem 1.25rem;
+  }
+  .mf-inner { max-width: 1600px; margin: 0 auto; }
+
+  .mf-brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-soft);
+    margin-bottom: 2rem;
+  }
+  .mf-brand-line {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 1.3rem;
+    color: var(--text-muted);
+    letter-spacing: -0.01em;
+  }
+  .mf-brand-line strong { color: var(--gold); font-weight: 500; font-style: normal; }
+  .mf-brand-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .mf-network { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .mf-network a {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .mf-network a:hover { color: var(--gold); border-color: var(--gold-dim); background: var(--bg-hover); }
+  .mf-network a.current { color: var(--gold); border-color: var(--gold-dim); }
+
+  .mf-section {
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mf-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mf-section-label::before {
+    content: '';
+    width: 5px; height: 5px;
+    background: var(--gold);
+    border-radius: 50%;
+  }
+  .mf-section-label .mf-section-meta {
+    margin-left: auto;
+    color: var(--text-dim);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: none;
+  }
+
+  .mf-grid { display: grid; gap: 1.5rem 2rem; }
+  .mf-g3 { grid-template-columns: repeat(3, 1fr); }
+  .mf-g4 { grid-template-columns: repeat(4, 1fr); }
+  .mf-g5 { grid-template-columns: repeat(5, 1fr); }
+  .mf-g6 { grid-template-columns: repeat(6, 1fr); }
+
+  .mf-col h5 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .mf-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .mf-col li a {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 2px 0;
+    line-height: 1.35;
+    transition: color 0.15s, padding-left 0.15s;
+  }
+  .mf-col li a:hover { color: var(--gold); padding-left: 4px; }
+  .mf-col li a.q {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-size: 12.5px;
+    color: var(--text);
+  }
+  .mf-col li a.q:hover { color: var(--gold); }
+
+  .mf-region h6 {
+    font-family: 'IBM Plex Serif', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--gold);
+    margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .mf-apps {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .mf-app-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .mf-app-btn:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+  .mf-bottom {
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .mf-copyright {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+  .mf-legal {
+    display: flex;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .mf-legal a { color: var(--text-dim); transition: color 0.15s; }
+  .mf-legal a:hover { color: var(--gold); }
+
+  .mf-disclaimer {
+    padding-top: 1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    line-height: 1.7;
+    text-align: center;
+    border-top: 1px solid var(--border-soft);
+    margin-top: 1rem;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  @media (max-width: 1200px) {
+    .mf-g5, .mf-g6 { grid-template-columns: repeat(3, 1fr); }
+    .mf-g4 { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 720px) {
+    .mega-footer { padding: 2rem 1rem 1rem; }
+    .mf-g3, .mf-g4, .mf-g5, .mf-g6 { grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .mf-brand { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ─── responsive ─── */
+  @media (max-width: 1400px) {
+    .board { grid-template-columns: repeat(8, 1fr); }
+    .c3 { grid-column: span 4; }
+    .c4 { grid-column: span 4; }
+    .c5 { grid-column: span 4; }
+    .c6 { grid-column: span 4; }
+    .c7 { grid-column: span 8; }
+    .c8 { grid-column: span 8; }
+    .c9 { grid-column: span 8; }
+    .foot-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 900px) {
+    .board { grid-template-columns: 1fr; gap: 0.5rem; padding: 0.5rem; }
+    .board > .panel { grid-column: span 1 !important; }
+    .topbar { flex-wrap: wrap; gap: 0.5rem; padding: 0.5rem; }
+    .topnav { display: none; }
+    .spot-price { font-size: 2.2rem; }
+    .ai-panel { width: calc(100vw - 2.5rem); }
+    .foot-grid { grid-template-columns: 1fr; }
+  }
+
+</style>
+
+<!-- Performance-page-specific styles (perf table, callouts, notes section) -->
+<style>
+
+  
+
+  /* top bar styles inherited from shared CSS */
 
   /* ─── hero ─── */
   .hero {
@@ -261,21 +1560,7 @@
   }
   .notes strong { color: var(--text); font-weight: 500; }
 
-  /* ─── footer ─── */
-  footer {
-    max-width: 1400px;
-    margin: 3rem auto 0;
-    padding: 2rem;
-    border-top: 1px solid var(--border-soft);
-    text-align: center;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10.5px;
-    color: var(--text-dim);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  footer a { color: var(--text-muted); margin: 0 8px; }
-  footer a:hover { color: var(--gold); }
+  
 
   @media (max-width: 900px) {
     .callouts { grid-template-columns: 1fr; }
@@ -283,20 +1568,84 @@
     .table-wrap { padding: 1rem; }
     .notes { padding: 0 1rem; }
   }
+
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">Gold<em>Terminal</em></div>
-  <nav class="breadcrumbs">
-    <a href="/">Terminal</a>
-    <span class="sep">·</span>
-    <a href="/">Data</a>
-    <span class="sep">·</span>
-    <span style="color: var(--gold);">Annual Performance</span>
+<!-- ═══════ CORGANO NETWORK STRIP ═══════ -->
+<div class="network-strip" role="navigation" aria-label="Corgano Network">
+  <div class="network-strip-label">Corgano Network</div>
+  <nav>
+    <a href="/" class="current">Gold</a>
+    <a href="https://silverprice.corgano.com/">Silver</a>
+    <a href="#" class="future" title="Coming soon" data-future="platinum">Platinum</a>
+    <a href="#" class="future" title="Coming soon" data-future="palladium">Palladium</a>
+    <a href="https://bitcoinprice.corgano.com/">Bitcoin</a>
+    <a href="https://corgano.com/">News &amp; Editorial</a>
   </nav>
+  <div class="network-strip-tag">Est. 2002 · <a href="https://corgano.com/about" style="color:inherit">About</a></div>
+</div>
+
+<!-- ═══════ TOP BAR (static page — refresh controls omitted) ═══════ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">Gold<em>Terminal</em></div>
+    <div class="brand-sub">Corgano · v2.1</div>
+  </div>
+  <nav class="topnav">
+    <a href="/">Terminal</a>
+    <a href="/performance.html" class="active">Charts</a>
+    <a href="https://corgano.com/blog/category/business/">News</a>
+    <a href="https://corgano.com/blog/category/business/">Analysis</a>
+    <a href="/#miners-gold-tbody">Miners</a>
+    <a href="https://corgano.com/contact">Forum</a>
+  </nav>
+  <div class="topbar-right">
+    <div class="status-pill">
+      <span class="status-label">REFERENCE DATA</span>
+    </div>
+    <a href="/" class="refresh-btn" title="Back to live terminal" style="text-decoration:none">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M6 1L0 8l6 7v-4h10V5H6z"/></svg>
+      <span>Live Terminal</span>
+    </a>
+  </div>
 </header>
+
+<!-- ═══════ TICKER ═══════ -->
+<div class="ticker-strip">
+  <div class="ticker-track">
+    <span class="ticker-item"><strong>AU</strong>4,687.20 <span class="up">+0.80%</span></span>
+    <a class="ticker-item" href="https://silverprice.corgano.com/"><strong>AG</strong>84.35 <span class="up">+1.16%</span></a>
+    <span class="ticker-item"><strong>PT</strong>1,612.40 <span class="down">−0.32%</span></span>
+    <span class="ticker-item"><strong>PD</strong>1,589.10 <span class="up">+0.43%</span></span>
+    <span class="ticker-item"><strong>RH</strong>5,450 <span class="flat">0.00%</span></span>
+    <span class="ticker-item"><strong>DXY</strong>98.45 <span class="down">−0.18%</span></span>
+    <span class="ticker-item"><strong>US10Y</strong>4.23% <span class="down">−0.05</span></span>
+    <span class="ticker-item"><strong>WTI</strong>80.45 <span class="up">+1.20%</span></span>
+    <a class="ticker-item" href="https://bitcoinprice.corgano.com/"><strong>BTC</strong>84,320 <span class="down">−0.41%</span></a>
+    <span class="ticker-item"><strong>DJIA</strong>39,450 <span class="up">+0.31%</span></span>
+    <span class="ticker-item"><strong>SPX</strong>5,682 <span class="up">+0.47%</span></span>
+    <a class="ticker-item" href="https://silverprice.corgano.com/" title="Gold/Silver ratio — click for silver price"><strong>G/S</strong>55.6 <span class="down">−0.20</span></a>
+    <span class="ticker-item"><strong>HUI</strong>498.30 <span class="up">+2.82%</span></span>
+    <span class="ticker-item"><strong>GDX</strong>52.40 <span class="up">+2.41%</span></span>
+    <!-- duplicate for loop -->
+    <span class="ticker-item"><strong>AU</strong>4,687.20 <span class="up">+0.80%</span></span>
+    <a class="ticker-item" href="https://silverprice.corgano.com/"><strong>AG</strong>84.35 <span class="up">+1.16%</span></a>
+    <span class="ticker-item"><strong>PT</strong>1,612.40 <span class="down">−0.32%</span></span>
+    <span class="ticker-item"><strong>PD</strong>1,589.10 <span class="up">+0.43%</span></span>
+    <span class="ticker-item"><strong>RH</strong>5,450 <span class="flat">0.00%</span></span>
+    <span class="ticker-item"><strong>DXY</strong>98.45 <span class="down">−0.18%</span></span>
+    <span class="ticker-item"><strong>US10Y</strong>4.23% <span class="down">−0.05</span></span>
+    <span class="ticker-item"><strong>WTI</strong>80.45 <span class="up">+1.20%</span></span>
+    <span class="ticker-item"><strong>BTC</strong>84,320 <span class="down">−0.41%</span></span>
+    <span class="ticker-item"><strong>DJIA</strong>39,450 <span class="up">+0.31%</span></span>
+    <span class="ticker-item"><strong>SPX</strong>5,682 <span class="up">+0.47%</span></span>
+    <span class="ticker-item"><strong>G/S</strong>55.6 <span class="down">−0.20</span></span>
+    <span class="ticker-item"><strong>HUI</strong>498.30 <span class="up">+2.82%</span></span>
+    <span class="ticker-item"><strong>GDX</strong>52.40 <span class="up">+2.41%</span></span>
+  </div>
+</div>
 
 <section class="hero">
   <div class="hero-kicker">Reference Data</div>
@@ -568,13 +1917,623 @@
   </p>
 </section>
 
-<footer>
-  <a href="/">← Back to Terminal</a>
-  <a href="#">Download CSV</a>
-  <a href="#">Methodology</a>
-  <a href="#">Contact</a>
-  <br><br>
-  © 2026 Corgano Network · Data provided as-is · Not investment advice
+<!-- Page-specific footer (page actions) -->
+
+<!-- ═══════ MEGA FOOTER ═══════ -->
+<footer class="mega-footer">
+  <div class="mf-inner">
+
+    <!-- ─── BRAND + SISTER SITE NAVIGATION ─── -->
+    <div class="mf-brand">
+      <div>
+        <div class="mf-brand-line"><strong>Corgano</strong> · Gold Terminal</div>
+        <div class="mf-brand-tag">The definitive view of precious metals · Est. 2002</div>
+      </div>
+      <nav class="mf-network" aria-label="Corgano Network">
+        <a href="/" class="current">Gold</a>
+        <a href="https://silverprice.corgano.com/">Silver</a>
+        <a href="#">Platinum</a>
+        <a href="#">Palladium</a>
+        <a href="https://bitcoinprice.corgano.com/">Bitcoin</a>
+        <a href="https://corgano.com/">News</a>
+      </nav>
+    </div>
+
+    <!-- ─── MARKETS & CHARTS ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Markets &amp; Charts
+        <span class="mf-section-meta">Live data · historical · reference</span>
+      </div>
+      <div class="mf-grid mf-g5">
+        <div class="mf-col">
+          <h5>Precious Metals</h5>
+          <ul>
+            <li><a href="#">Gold Price</a></li>
+            <li><a href="#">Silver Price</a></li>
+            <li><a href="#">Platinum Price</a></li>
+            <li><a href="#">Palladium Price</a></li>
+            <li><a href="#">Rhodium Price</a></li>
+            <li><a href="#">Gold/Silver Ratio</a></li>
+            <li><a href="#">All Metals Overview</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>By Weight Unit</h5>
+          <ul>
+            <li><a href="#">Gold Price per Ounce</a></li>
+            <li><a href="#">Gold Price per Gram</a></li>
+            <li><a href="#">Gold Price per Kilo</a></li>
+            <li><a href="#">Gold Price per Tola</a></li>
+            <li><a href="#">Gold Price per Grain</a></li>
+            <li><a href="#">Gold Price per Pennyweight</a></li>
+            <li><a href="#">Unit Conversion Table</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>By Karat</h5>
+          <ul>
+            <li><a href="#">24K Gold Price</a></li>
+            <li><a href="#">22K Gold Price</a></li>
+            <li><a href="#">21K Gold Price</a></li>
+            <li><a href="#">18K Gold Price</a></li>
+            <li><a href="#">14K Gold Price</a></li>
+            <li><a href="#">10K Gold Price</a></li>
+            <li><a href="#">9K Gold Price</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Chart Types</h5>
+          <ul>
+            <li><a href="#">Live Gold Chart</a></li>
+            <li><a href="#">1-Day Chart</a></li>
+            <li><a href="#">30-Day Chart</a></li>
+            <li><a href="#">1-Year Chart</a></li>
+            <li><a href="#">5-Year Chart</a></li>
+            <li><a href="#">25-Year Chart</a></li>
+            <li><a href="#">50-Year Chart</a></li>
+            <li><a href="#">All-Time History</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Data &amp; Comparisons</h5>
+          <ul>
+            <li><a href="#">Gold vs Inflation (CPI)</a></li>
+            <li><a href="#">Gold vs S&amp;P 500</a></li>
+            <li><a href="#">Gold vs US Dollar (DXY)</a></li>
+            <li><a href="#">Gold vs Bitcoin</a></li>
+            <li><a href="#">Gold vs 10Y Treasury</a></li>
+            <li><a href="#">Annual % Change Table</a></li>
+            <li><a href="#">London Fix Archive</a></li>
+            <li><a href="#">COMEX Futures Curve</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── JEWELER TOOLS & CALCULATORS ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Tools &amp; Calculators
+        <span class="mf-section-meta">For jewelers, traders, and investors</span>
+      </div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>Jeweler &amp; Scrap</h5>
+          <ul>
+            <li><a href="#" class="q">How much is my gold jewelry worth?</a></li>
+            <li><a href="#" class="q">How much is my scrap gold worth?</a></li>
+            <li><a href="#" class="q">What karat is my gold jewelry?</a></li>
+            <li><a href="#" class="q">How much is my coin worth?</a></li>
+            <li><a href="#">Melt Value Calculator</a></li>
+            <li><a href="#">Scrap Gold Calculator</a></li>
+            <li><a href="#">Karat Converter</a></li>
+            <li><a href="#">Coin Melt Calculator</a></li>
+            <li><a href="#">Multi-Item Bulk Calculator</a></li>
+            <li><a href="#">Refiner Settlement Calculator</a></li>
+            <li><a href="#">Gold Party Calculator</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Conversions</h5>
+          <ul>
+            <li><a href="#" class="q">How many grams in a troy ounce?</a></li>
+            <li><a href="#" class="q">Convert ounces, grams and kilos</a></li>
+            <li><a href="#">Troy Ounce ↔ Gram</a></li>
+            <li><a href="#">Troy Ounce ↔ Kilogram</a></li>
+            <li><a href="#">Gram ↔ Pennyweight</a></li>
+            <li><a href="#">Grain ↔ Gram</a></li>
+            <li><a href="#">Tola ↔ Troy Ounce</a></li>
+            <li><a href="#">Unit Conversion Reference</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Investor Tools</h5>
+          <ul>
+            <li><a href="#" class="q">Should I buy gold now?</a></li>
+            <li><a href="#" class="q">How much gold should I own?</a></li>
+            <li><a href="#" class="q">What's my portfolio worth?</a></li>
+            <li><a href="#">Portfolio Tracker</a></li>
+            <li><a href="#">Allocation Calculator</a></li>
+            <li><a href="#">Dollar-Cost Averaging Simulator</a></li>
+            <li><a href="#">Gold IRA Calculator</a></li>
+            <li><a href="#">Historical Price Lookup</a></li>
+            <li><a href="#">Premium / Spread Tracker</a></li>
+            <li><a href="#">Inflation-Adjusted Price</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Market Data Tools</h5>
+          <ul>
+            <li><a href="#">Central Bank Gold Tracker</a></li>
+            <li><a href="#">COT Positioning Report</a></li>
+            <li><a href="#">GLD ETF Flows</a></li>
+            <li><a href="#">Gold/Silver Ratio Calculator</a></li>
+            <li><a href="#">Mint Premium Tracker</a></li>
+            <li><a href="#">Price Alerts (email/SMS)</a></li>
+            <li><a href="#">RSS Feeds</a></li>
+            <li><a href="#">Widgets for Your Website</a></li>
+            <li><a href="#">API Access</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BUY PRECIOUS METALS (commerce/affiliate) ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Buy &amp; Sell Precious Metals
+        <span class="mf-section-meta">Dealers, bullion products, regional guides</span>
+      </div>
+      <div class="mf-grid mf-g6">
+        <div class="mf-col">
+          <h5>Buy Gold · USA</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers USA</a></li>
+            <li><a href="#">USA Gold Bars</a></li>
+            <li><a href="#">USA Small Gold Bars</a></li>
+            <li><a href="#">USA Gold Coins</a></li>
+            <li><a href="#">USA Small Gold Coins</a></li>
+            <li><a href="#">Gold IRA Providers</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Gold · Canada</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers Canada</a></li>
+            <li><a href="#">Canadian Gold Bars</a></li>
+            <li><a href="#">Canadian Small Gold Bars</a></li>
+            <li><a href="#">Canadian Gold Coins</a></li>
+            <li><a href="#">Canadian Small Gold Coins</a></li>
+            <li><a href="#">Royal Canadian Mint</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Gold · UK</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers UK</a></li>
+            <li><a href="#">UK Gold Bars</a></li>
+            <li><a href="#">UK Small Gold Bars</a></li>
+            <li><a href="#">UK Gold Coins</a></li>
+            <li><a href="#">UK Small Gold Coins</a></li>
+            <li><a href="#">Royal Mint</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Gold · Australia</h5>
+          <ul>
+            <li><a href="#">Best Gold Dealers Australia</a></li>
+            <li><a href="#">Australian Gold Bars</a></li>
+            <li><a href="#">Australian Small Gold Bars</a></li>
+            <li><a href="#">Australian Gold Coins</a></li>
+            <li><a href="#">Australian Small Gold Coins</a></li>
+            <li><a href="#">Perth Mint</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Buy Silver</h5>
+          <ul>
+            <li><a href="#">Best Silver Dealers USA</a></li>
+            <li><a href="#">Best Silver Dealers UK</a></li>
+            <li><a href="#">Best Silver Dealers Canada</a></li>
+            <li><a href="#">Silver Bars</a></li>
+            <li><a href="#">Silver Coins</a></li>
+            <li><a href="#">Pre-1965 Junk Silver</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Sell Precious Metals</h5>
+          <ul>
+            <li><a href="#">Sell Gold Jewelry</a></li>
+            <li><a href="#">Sell Scrap Gold</a></li>
+            <li><a href="#">Sell Gold Coins</a></li>
+            <li><a href="#">Sell Gold Bars</a></li>
+            <li><a href="#">Sell Silver</a></li>
+            <li><a href="#">Refiner Directory</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BULLION COINS & BARS BY PRODUCT ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Bullion Coins &amp; Bars
+        <span class="mf-section-meta">By product, mint, weight</span>
+      </div>
+      <div class="mf-grid mf-g5">
+        <div class="mf-col">
+          <h5>Gold Coins · Sovereign</h5>
+          <ul>
+            <li><a href="#">American Gold Eagle</a></li>
+            <li><a href="#">American Gold Buffalo</a></li>
+            <li><a href="#">Canadian Maple Leaf</a></li>
+            <li><a href="#">South African Krugerrand</a></li>
+            <li><a href="#">Austrian Philharmonic</a></li>
+            <li><a href="#">British Britannia</a></li>
+            <li><a href="#">British Sovereign</a></li>
+            <li><a href="#">Chinese Panda</a></li>
+            <li><a href="#">Australian Kangaroo</a></li>
+            <li><a href="#">Swiss Vreneli</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Silver Coins</h5>
+          <ul>
+            <li><a href="#">American Silver Eagle</a></li>
+            <li><a href="#">Canadian Silver Maple</a></li>
+            <li><a href="#">Austrian Silver Philharmonic</a></li>
+            <li><a href="#">British Silver Britannia</a></li>
+            <li><a href="#">Australian Silver Kangaroo</a></li>
+            <li><a href="#">Mexican Libertad</a></li>
+            <li><a href="#">Chinese Silver Panda</a></li>
+            <li><a href="#">Morgan / Peace Dollars</a></li>
+            <li><a href="#">Junk Silver (Pre-1965)</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Gold Bars by Weight</h5>
+          <ul>
+            <li><a href="#">1 Gram Gold Bars</a></li>
+            <li><a href="#">5 Gram Gold Bars</a></li>
+            <li><a href="#">10 Gram Gold Bars</a></li>
+            <li><a href="#">1 oz Gold Bars</a></li>
+            <li><a href="#">50 Gram Gold Bars</a></li>
+            <li><a href="#">100 Gram Gold Bars</a></li>
+            <li><a href="#">10 oz Gold Bars</a></li>
+            <li><a href="#">1 Kilogram Gold Bars</a></li>
+            <li><a href="#">LBMA Good Delivery (400 oz)</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Silver Bars by Weight</h5>
+          <ul>
+            <li><a href="#">1 oz Silver Bars</a></li>
+            <li><a href="#">5 oz Silver Bars</a></li>
+            <li><a href="#">10 oz Silver Bars</a></li>
+            <li><a href="#">100 oz Silver Bars</a></li>
+            <li><a href="#">1 Kilo Silver Bars</a></li>
+            <li><a href="#">1,000 oz COMEX Bars</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Refiners &amp; Mints</h5>
+          <ul>
+            <li><a href="#">US Mint</a></li>
+            <li><a href="#">Royal Canadian Mint</a></li>
+            <li><a href="#">Royal Mint (UK)</a></li>
+            <li><a href="#">Perth Mint</a></li>
+            <li><a href="#">PAMP Suisse</a></li>
+            <li><a href="#">Credit Suisse</a></li>
+            <li><a href="#">Valcambi</a></li>
+            <li><a href="#">Argor-Heraeus</a></li>
+            <li><a href="#">Metalor</a></li>
+            <li><a href="#">Johnson Matthey</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── GOLD PRICE BY COUNTRY (the SEO monster) ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Gold Price by Country
+        <span class="mf-section-meta">Local currency · live conversion · regional context</span>
+      </div>
+      <div class="mf-grid mf-g5">
+        <div class="mf-region">
+          <h6>Americas</h6>
+          <ul>
+            <li><a href="#">Gold Price USA</a></li>
+            <li><a href="#">Gold Price Canada</a></li>
+            <li><a href="#">Gold Price Mexico</a></li>
+            <li><a href="#">Gold Price Brazil</a></li>
+            <li><a href="#">Gold Price Argentina</a></li>
+            <li><a href="#">Gold Price Chile</a></li>
+            <li><a href="#">Gold Price Colombia</a></li>
+            <li><a href="#">Gold Price Peru</a></li>
+            <li><a href="#">Gold Price Uruguay</a></li>
+            <li><a href="#">Gold Price Dominican Republic</a></li>
+            <li><a href="#">Gold Price Costa Rica</a></li>
+            <li><a href="#">Gold Price Venezuela</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Europe</h6>
+          <ul>
+            <li><a href="#">Gold Price United Kingdom</a></li>
+            <li><a href="#">Gold Price Germany</a></li>
+            <li><a href="#">Gold Price France</a></li>
+            <li><a href="#">Gold Price Italy</a></li>
+            <li><a href="#">Gold Price Spain</a></li>
+            <li><a href="#">Gold Price Netherlands</a></li>
+            <li><a href="#">Gold Price Switzerland</a></li>
+            <li><a href="#">Gold Price Sweden</a></li>
+            <li><a href="#">Gold Price Norway</a></li>
+            <li><a href="#">Gold Price Denmark</a></li>
+            <li><a href="#">Gold Price Poland</a></li>
+            <li><a href="#">Gold Price Austria</a></li>
+            <li><a href="#">Gold Price Portugal</a></li>
+            <li><a href="#">Gold Price Ireland</a></li>
+            <li><a href="#">Gold Price Romania</a></li>
+            <li><a href="#">Gold Price Serbia</a></li>
+            <li><a href="#">Gold Price Ukraine</a></li>
+            <li><a href="#">Gold Price Russia</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Middle East</h6>
+          <ul>
+            <li><a href="#">Gold Price UAE</a></li>
+            <li><a href="#">Gold Price Saudi Arabia</a></li>
+            <li><a href="#">Gold Price Qatar</a></li>
+            <li><a href="#">Gold Price Kuwait</a></li>
+            <li><a href="#">Gold Price Bahrain</a></li>
+            <li><a href="#">Gold Price Oman</a></li>
+            <li><a href="#">Gold Price Jordan</a></li>
+            <li><a href="#">Gold Price Lebanon</a></li>
+            <li><a href="#">Gold Price Israel</a></li>
+            <li><a href="#">Gold Price Turkey</a></li>
+            <li><a href="#">Gold Price Iran</a></li>
+            <li><a href="#">Gold Price Iraq</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Asia &amp; Oceania</h6>
+          <ul>
+            <li><a href="#">Gold Price China</a></li>
+            <li><a href="#">Gold Price Hong Kong</a></li>
+            <li><a href="#">Gold Price Taiwan</a></li>
+            <li><a href="#">Gold Price Japan</a></li>
+            <li><a href="#">Gold Price South Korea</a></li>
+            <li><a href="#">Gold Price India</a></li>
+            <li><a href="#">Gold Price Pakistan</a></li>
+            <li><a href="#">Gold Price Bangladesh</a></li>
+            <li><a href="#">Gold Price Sri Lanka</a></li>
+            <li><a href="#">Gold Price Singapore</a></li>
+            <li><a href="#">Gold Price Malaysia</a></li>
+            <li><a href="#">Gold Price Thailand</a></li>
+            <li><a href="#">Gold Price Vietnam</a></li>
+            <li><a href="#">Gold Price Philippines</a></li>
+            <li><a href="#">Gold Price Indonesia</a></li>
+            <li><a href="#">Gold Price Australia</a></li>
+            <li><a href="#">Gold Price New Zealand</a></li>
+          </ul>
+        </div>
+        <div class="mf-region">
+          <h6>Africa</h6>
+          <ul>
+            <li><a href="#">Gold Price Egypt</a></li>
+            <li><a href="#">Gold Price South Africa</a></li>
+            <li><a href="#">Gold Price Morocco</a></li>
+            <li><a href="#">Gold Price Tunisia</a></li>
+            <li><a href="#">Gold Price Libya</a></li>
+            <li><a href="#">Gold Price Nigeria</a></li>
+            <li><a href="#">Gold Price Kenya</a></li>
+            <li><a href="#">Gold Price Ghana</a></li>
+            <li><a href="#">Gold Price Ethiopia</a></li>
+            <li><a href="#">Gold Price Algeria</a></li>
+            <li><a href="#">Gold Price Tanzania</a></li>
+            <li><a href="#">Gold Price Uganda</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── GUIDES & EDUCATION ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        Guides &amp; Education
+        <span class="mf-section-meta">Evergreen reference content</span>
+      </div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>Beginner's Guides</h5>
+          <ul>
+            <li><a href="#">How to Buy Gold (Beginner's Guide)</a></li>
+            <li><a href="#">Gold vs Silver — Which to Buy?</a></li>
+            <li><a href="#">Physical Gold vs ETF vs Mining Stocks</a></li>
+            <li><a href="#">How Much Gold Should You Own?</a></li>
+            <li><a href="#">Where to Buy Physical Gold Safely</a></li>
+            <li><a href="#">Common Bullion Scams to Avoid</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Karat, Purity &amp; Testing</h5>
+          <ul>
+            <li><a href="#">Understanding Karats (10K–24K)</a></li>
+            <li><a href="#">Gold-Filled vs Plated vs Solid</a></li>
+            <li><a href="#">Sterling Silver vs Silver-Plated</a></li>
+            <li><a href="#">How to Test Gold at Home</a></li>
+            <li><a href="#">Acid Tests vs Electronic Testers</a></li>
+            <li><a href="#">Spotting Counterfeit Coins</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Storage, Tax &amp; Insurance</h5>
+          <ul>
+            <li><a href="#">Storing Precious Metals at Home</a></li>
+            <li><a href="#">Bank Safe Deposit Boxes</a></li>
+            <li><a href="#">Third-Party Vault Storage</a></li>
+            <li><a href="#">Insurance for Precious Metals</a></li>
+            <li><a href="#">Tax Rules on Gold Sales (USA)</a></li>
+            <li><a href="#">Gold IRA: Rules &amp; Custodians</a></li>
+            <li><a href="#">Inheritance &amp; Estate Planning</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Market Concepts</h5>
+          <ul>
+            <li><a href="#">What Is the London Fix?</a></li>
+            <li><a href="#">Understanding Gold/Silver Ratio</a></li>
+            <li><a href="#">Spot Price vs Dealer Premium</a></li>
+            <li><a href="#">Why Central Banks Buy Gold</a></li>
+            <li><a href="#">Gold as Inflation Hedge — Does It Work?</a></li>
+            <li><a href="#">COMEX &amp; Futures Markets Explained</a></li>
+            <li><a href="#">Real Yields and Gold — The Link</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── NEWS & MINING ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">
+        News, Analysis &amp; Mining
+        <span class="mf-section-meta">Daily updates · weekly deep-dives · archive</span>
+      </div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>News Categories</h5>
+          <ul>
+            <li><a href="#">Latest News</a></li>
+            <li><a href="#">Morning Brief (Daily)</a></li>
+            <li><a href="#">Weekly Analysis</a></li>
+            <li><a href="#">Fed &amp; Macro</a></li>
+            <li><a href="#">Central Bank Coverage</a></li>
+            <li><a href="#">Geopolitics &amp; Gold</a></li>
+            <li><a href="#">Physical Demand (Asia)</a></li>
+            <li><a href="#">Technical Analysis</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Mining Stocks</h5>
+          <ul>
+            <li><a href="#">Top Gold Miners (by Market Cap)</a></li>
+            <li><a href="#">Top Silver Miners</a></li>
+            <li><a href="#">Royalty Companies</a></li>
+            <li><a href="#">Junior Explorers</a></li>
+            <li><a href="#">Gold Mining ETFs (GDX, GDXJ)</a></li>
+            <li><a href="#">Silver Mining ETFs (SIL, SILJ)</a></li>
+            <li><a href="#">Miner Performance Dashboard</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Research &amp; Reports</h5>
+          <ul>
+            <li><a href="#">Analyst Commentary Archive</a></li>
+            <li><a href="#">Standard Bank Weekly Report</a></li>
+            <li><a href="#">Scotia Mocatta Morning Notes</a></li>
+            <li><a href="#">Silver Institute Annual Survey</a></li>
+            <li><a href="#">World Gold Council Reports</a></li>
+            <li><a href="#">BIS Reports on Gold</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Cryptocurrency</h5>
+          <ul>
+            <li><a href="https://bitcoinprice.corgano.com/">Bitcoin Price</a></li>
+            <li><a href="#">Ethereum Price</a></li>
+            <li><a href="#">Solana Price</a></li>
+            <li><a href="#">Cardano Price</a></li>
+            <li><a href="#">Polkadot Price</a></li>
+            <li><a href="#">XRP Price</a></li>
+            <li><a href="#">Gold-Backed Tokens (PAXG, XAUT)</a></li>
+            <li><a href="#">View All Cryptos →</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── CORPORATE / APPS / LEGAL ─── -->
+    <section class="mf-section">
+      <div class="mf-section-label">Corgano Network &amp; Corporate</div>
+      <div class="mf-grid mf-g4">
+        <div class="mf-col">
+          <h5>Sister Sites</h5>
+          <ul>
+            <li><a href="/">Gold Price Terminal</a></li>
+            <li><a href="https://silverprice.corgano.com/">Silver Price</a></li>
+            <li><a href="#">Platinum Price</a></li>
+            <li><a href="#">Palladium Price</a></li>
+            <li><a href="https://bitcoinprice.corgano.com/">Bitcoin Price</a></li>
+            <li><a href="https://corgano.com/">Corgano News</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>For Developers</h5>
+          <ul>
+            <li><a href="#">API Access</a></li>
+            <li><a href="#">RSS Feeds</a></li>
+            <li><a href="#">Embeddable Widgets</a></li>
+            <li><a href="#">Chart Image Hotlinks</a></li>
+            <li><a href="#">Historical Data Downloads</a></li>
+            <li><a href="#">Documentation</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Company</h5>
+          <ul>
+            <li><a href="#">About Corgano</a></li>
+            <li><a href="#">Our Methodology</a></li>
+            <li><a href="#">Editorial Standards</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Press Inquiries</a></li>
+            <li><a href="#">Contact Us</a></li>
+            <li><a href="#">Advertise With Us</a></li>
+            <li><a href="#">Feedback</a></li>
+          </ul>
+        </div>
+        <div class="mf-col">
+          <h5>Mobile &amp; Alerts</h5>
+          <ul>
+            <li><a href="#">Email Newsletter</a></li>
+            <li><a href="#">Price Alerts (SMS/Email)</a></li>
+            <li><a href="#">Subscribe via RSS</a></li>
+            <li><a href="#">Follow on X / Twitter</a></li>
+            <li><a href="#">Follow on LinkedIn</a></li>
+          </ul>
+          <div class="mf-apps">
+            <a href="#" class="mf-app-btn">iOS App</a>
+            <a href="#" class="mf-app-btn">Android App</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── BOTTOM: COPYRIGHT + LEGAL ─── -->
+    <div class="mf-bottom">
+      <div class="mf-copyright">© 2026 CORGANO NETWORK · ALL RIGHTS RESERVED</div>
+      <div class="mf-legal">
+        <a href="#">Terms of Use</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Cookie Policy</a>
+        <a href="#">Disclaimer</a>
+        <a href="#">Risk Warning</a>
+        <a href="#">Accessibility</a>
+        <a href="#">Site Map</a>
+        <a href="#">California Notice</a>
+      </div>
+    </div>
+
+    <div class="mf-disclaimer">
+      Market data is indicative only and may be delayed. Nothing on this site constitutes financial, investment, tax, or legal advice.
+      Precious metals investment carries risk; past performance does not predict future results.
+      The AI Assistant opens external third-party services (Perplexity, ChatGPT, Claude, Google) in a new tab using your own free account — Corgano does not see your queries or receive your chat history.
+      Kitco chart images, when displayed in fallback mode, are hotlinked with attribution per Kitco's terms of service.
+    </div>
+
+  </div>
 </footer>
 
 </body>

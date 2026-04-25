@@ -41,7 +41,8 @@ Static-first HTML/CSS/JS frontend, PHP backend aggregating MetalpriceAPI + Finnh
     ├── README.md           # notes about the private dir
     └── cron/
         ├── fetch-news.php  # RSS harvester (run every 10 min)
-        └── tag-news.php    # optional LLM classifier (run daily if OpenAI key set)
+    ├── tag-news.php    # optional LLM classifier (run daily if OpenAI key set)
+    └── build-seasonality.php  # monthly 20Y seasonality snapshot
 ```
 
 ---
@@ -124,7 +125,7 @@ Save (in nano: Ctrl+O, Enter, Ctrl+X).
 
 ### Step 6 — Set up cron jobs
 
-In cPanel → **Cron Jobs**, add two entries. Replace `YOURUSER` with your actual username.
+In cPanel → **Cron Jobs**, add three entries. Replace `YOURUSER` with your actual username.
 
 **News harvester** — runs every 10 minutes, keeps the news feed fresh:
 ```
@@ -134,6 +135,11 @@ In cPanel → **Cron Jobs**, add two entries. Replace `YOURUSER` with your actua
 **News classifier** — runs daily at 4:15 AM, adds topic tags to headlines using OpenAI. Skip this if you left `openai_key` empty:
 ```
 15 4 * * * /usr/bin/php /home/YOURUSER/private/cron/tag-news.php >> /home/YOURUSER/private/cron.log 2>&1
+```
+
+**Seasonality snapshot** — runs monthly at 3:00 AM on the 1st, rebuilds the 20-year average monthly-return panel:
+```
+0 3 1 * * /usr/bin/php /home/YOURUSER/private/cron/build-seasonality.php >> /home/YOURUSER/private/cron.log 2>&1
 ```
 
 Note: NameHero sometimes uses `/usr/local/bin/php` instead of `/usr/bin/php`. If your cron log shows "php not found", try the other path. `which php` in SSH will confirm.
@@ -152,6 +158,12 @@ If the dashboard loads but news section is empty, the cron hasn't run yet. Wait 
 
 ```bash
 php ~/private/cron/fetch-news.php
+```
+
+If the seasonality panel is blank after deploy, run this once:
+
+```bash
+php ~/private/cron/build-seasonality.php
 ```
 
 If the "FALLBACK" pill appears in the top right, MetalpriceAPI isn't working — usually a bad key or exhausted quota. Check the JSON endpoint's `warnings` field.

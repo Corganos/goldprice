@@ -11,10 +11,12 @@ private/
 ├── data/
 │   ├── cache/              # runtime cache (auto-created by dashboard.php)
 │   ├── news.sqlite         # news DB (auto-created by fetch-news.php)
+│   ├── seasonality.json    # monthly-built 20Y seasonality snapshot
 │   └── rhodium.json        # optional weekly manual rhodium price override
 └── cron/
     ├── fetch-news.php      # RSS harvester — cron every 10 min
-    └── tag-news.php        # optional LLM classifier — cron daily
+  ├── tag-news.php        # optional LLM classifier — cron daily
+  └── build-seasonality.php  # rebuilds the seasonality panel monthly
 ```
 
 ## First-deploy checklist

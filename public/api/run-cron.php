@@ -6,17 +6,35 @@
 declare(strict_types=1);
 
 // Change this to any long random string you like
-$SECRET = 'your-random-secret-change-me';
+$SECRET = 'xk9m2p4q-corgano-4n8r7t1w';
 
 if (($_GET['key'] ?? '') !== $SECRET) {
     http_response_code(403);
     die('forbidden');
 }
 
+$cronDirCandidates = [
+    __DIR__ . '/../../../private/cron',
+    __DIR__ . '/../../private/cron',
+    // '/home/YOURUSER/private/cron',
+];
+$cronDir = null;
+foreach ($cronDirCandidates as $candidate) {
+    if (is_dir($candidate)) {
+        $cronDir = $candidate;
+        break;
+    }
+}
+if (!$cronDir) {
+    http_response_code(500);
+    die('cron dir not found');
+}
+
 $job = $_GET['job'] ?? '';
 $scripts = [
-    'news' => '/home8/ivancicg/private/cron/fetch-news.php',
-    'tag'  => '/home8/ivancicg/private/cron/tag-news.php',
+    'news'        => $cronDir . '/fetch-news.php',
+    'tag'         => $cronDir . '/tag-news.php',
+    'seasonality' => $cronDir . '/build-seasonality.php',
 ];
 if (!isset($scripts[$job]) || !is_file($scripts[$job])) {
     die('unknown job');
