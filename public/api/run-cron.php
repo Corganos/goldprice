@@ -47,4 +47,28 @@ ob_flush(); flush();
 // Include the cron script directly in this request
 require $scripts[$job];
 
+if ($job === 'seasonality' && function_exists('build_seasonality_snapshot')) {
+    $configPath = dirname($cronDir) . '/config.php';
+    if (!is_file($configPath)) {
+        http_response_code(500);
+        die("config.php not found\n");
+    }
+
+    $config = require $configPath;
+    $result = build_seasonality_snapshot(
+        $config,
+        static function (string $message): void {
+            echo $message . "\n";
+        },
+        ['delay_seconds' => 0]
+    );
+
+    if (empty($result['ok'])) {
+        http_response_code(500);
+        die(($result['error'] ?? 'seasonality: build failed') . "\n");
+    }
+
+    echo ($result['message'] ?? 'seasonality: build complete') . "\n";
+}
+
 echo "\n[done]\n";

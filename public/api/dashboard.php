@@ -60,6 +60,48 @@ function cache_set(string $key, array $data, string $dir): void {
     @file_put_contents($dir . '/' . md5($key) . '.json', json_encode($data));
 }
 
+function load_seasonality_snapshot(string $path): ?array {
+    if (!is_file($path)) return null;
+    $seasonality = @json_decode((string)file_get_contents($path), true);
+    return is_array($seasonality) ? $seasonality : null;
+}
+
+function fetch_seasonality(array $cfg): ?array {
+    $seasonalityPath = rtrim($cfg['data_dir'], '/\\') . '/seasonality.json';
+    $seasonality = load_seasonality_snapshot($seasonalityPath);
+    if (!empty($seasonality['months'])) {
+        return $seasonality;
+    }
+
+    $scriptCandidates = [
+        __DIR__ . '/../../../private/cron/build-seasonality.php',
+        __DIR__ . '/../../private/cron/build-seasonality.php',
+    ];
+
+    foreach ($scriptCandidates as $scriptPath) {
+        if (!is_file($scriptPath)) {
+            continue;
+        }
+
+        require_once $scriptPath;
+        if (!function_exists('build_seasonality_snapshot')) {
+            continue;
+        }
+
+        @set_time_limit(45);
+        $result = build_seasonality_snapshot($cfg, null, ['delay_seconds' => 0]);
+        if (!empty($result['ok'])) {
+            $built = load_seasonality_snapshot($seasonalityPath);
+            if (!empty($built['months'])) {
+                return $built;
+            }
+            return is_array($result['payload'] ?? null) ? $result['payload'] : null;
+        }
+    }
+
+    return $seasonality;
+}
+
 // ─── HTTP helper (curl with timeout + error tolerance) ─────────────────
 function http_json(string $url, int $timeout = 8): ?array {
     $ch = curl_init($url);
@@ -702,14 +744,7 @@ if (empty($corgano_articles)) {
     $warnings[] = 'Corgano WordPress feed empty or unreachable — commentary panel will show fallback content.';
 }
 
-$seasonalityPath = rtrim($CONFIG['data_dir'], '/\\') . '/seasonality.json';
-$seasonality = null;
-if (is_file($seasonalityPath)) {
-    $seasonality = @json_decode((string)file_get_contents($seasonalityPath), true);
-    if (!is_array($seasonality)) {
-        $seasonality = null;
-    }
-}
+$seasonality = fetch_seasonality($CONFIG);
 if (empty($seasonality['months'])) {
     $warnings[] = 'Seasonality snapshot missing — has the monthly build-seasonality cron run yet?';
 }

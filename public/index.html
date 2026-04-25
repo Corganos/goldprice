@@ -1735,7 +1735,7 @@
   <!-- Seasonality -->
   <section class="panel c6">
     <div class="panel-header">
-      <div class="panel-title"><span class="gold-dot"></span>SEASONALITY · 20Y</div>
+      <div class="panel-title" id="seasonality-title"><span class="gold-dot"></span>SEASONALITY · 20Y</div>
       <div class="panel-meta" id="seasonality-meta">Avg monthly return</div>
     </div>
     <div class="panel-body">
@@ -3285,11 +3285,17 @@
     const list = document.getElementById('seasonality-bars');
     const meta = document.getElementById('seasonality-meta');
     const summary = document.getElementById('seasonality-summary');
+    const title = document.getElementById('seasonality-title');
     if (!list) return;
 
+    const years = Number(seasonality && seasonality.years) || 0;
     const months = Array.isArray(seasonality && seasonality.months)
       ? [...seasonality.months].sort((a, b) => Number(a.month || 0) - Number(b.month || 0))
       : [];
+
+    if (title) {
+      title.innerHTML = '<span class="gold-dot"></span>' + (years > 0 ? 'SEASONALITY · ' + years + 'Y' : 'SEASONALITY · 20Y');
+    }
 
     if (meta) {
       if (seasonality && seasonality.generated_at) {
