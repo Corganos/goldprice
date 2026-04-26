@@ -217,7 +217,7 @@ Being honest: the dashboard is **deployable today** and will look great with liv
 - Corgano editorial (once you tag WordPress posts)
 - FX table (gold priced in 16 currencies)
 - Gold/silver ratio, gold/Pt ratio, etc.
-- KGX move-attribution panel
+- Gold move-drivers panel
 - Kitco fallback charts when feeds fail
 
 ### Still on demo data (easy follow-up wiring)

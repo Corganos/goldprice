@@ -104,18 +104,47 @@ function fetch_seasonality(array $cfg): ?array {
 
 // ─── HTTP helper (curl with timeout + error tolerance) ─────────────────
 function http_json(string $url, int $timeout = 8): ?array {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => $timeout,
-        CURLOPT_CONNECTTIMEOUT => 4,
-        CURLOPT_FOLLOWLOCATION => true,
-        CURLOPT_USERAGENT      => 'GoldTerminal/1.0',
-    ]);
-    $body = curl_exec($ch);
-    $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    if ($code !== 200 || !$body) return null;
+    $body = null;
+    $code = 0;
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => $timeout,
+            CURLOPT_CONNECTTIMEOUT => 4,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_USERAGENT      => 'GoldTerminal/1.0',
+        ]);
+        $body = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+    }
+
+    if ($code !== 200 || !$body) {
+        $context = stream_context_create([
+            'http' => [
+                'timeout'       => $timeout,
+                'ignore_errors' => true,
+                'header'        => "User-Agent: GoldTerminal/1.0\r\n",
+            ],
+        ]);
+        $fallbackBody = @file_get_contents($url, false, $context);
+        if ($fallbackBody !== false && $fallbackBody !== '') {
+            $body = $fallbackBody;
+            $code = 0;
+            foreach ($http_response_header ?? [] as $headerLine) {
+                if (preg_match('#HTTP/\\S+\\s+(\\d+)#', $headerLine, $matches)) {
+                    $code = (int)$matches[1];
+                    break;
+                }
+            }
+        }
+    }
+
+    if ($code !== 0 && $code !== 200) return null;
+    if (!$body) return null;
+
     $d = @json_decode($body, true);
     return is_array($d) ? $d : null;
 }
@@ -475,6 +504,307 @@ function fetch_macro(array $cfg): array {
     return $out;
 }
 
+function fetch_gold_timeframe_series(array $cfg, int $lookbackDays = 90): array {
+    $end = new DateTimeImmutable('today', new DateTimeZone('UTC'));
+    $start = $end->modify('-' . max(30, $lookbackDays) . ' days');
+    $key = urlencode($cfg['metalprice_key']);
+    $url = 'https://api.metalpriceapi.com/v1/timeframe'
+         . '?api_key=' . $key
+         . '&base=USD&currencies=XAU'
+         . '&start_date=' . $start->format('Y-m-d')
+         . '&end_date=' . $end->format('Y-m-d');
+
+    $data = http_json($url, 12);
+    if (empty($data['rates']) || !is_array($data['rates'])) {
+        return [];
+    }
+
+    $sample = null;
+    foreach ($data['rates'] as $rates) {
+        if (!is_array($rates)) continue;
+        if (isset($rates['USDXAU']) && $rates['USDXAU'] > 0) {
+            $sample = (float)$rates['USDXAU'];
+            break;
+        }
+        if (isset($rates['XAU']) && $rates['XAU'] > 0) {
+            $sample = (float)$rates['XAU'];
+            break;
+        }
+    }
+    if ($sample === null || $sample <= 0) {
+        return [];
+    }
+
+    $series = [];
+    $hasUsdXau = $sample > 1;
+    foreach ($data['rates'] as $date => $rates) {
+        if (!is_array($rates)) continue;
+        if ($hasUsdXau && isset($rates['USDXAU']) && $rates['USDXAU'] > 0) {
+            $series[$date] = (float)$rates['USDXAU'];
+            continue;
+        }
+        if (isset($rates['XAU']) && $rates['XAU'] > 0) {
+            $value = (float)$rates['XAU'];
+            $series[$date] = $value < 1 ? (1 / $value) : $value;
+        }
+    }
+
+    ksort($series);
+    return $series;
+}
+
+function fetch_yahoo_chart_series(string $symbol, int $rangeDays = 90): array {
+    $encoded = rawurlencode($symbol);
+    $range = $rangeDays <= 35 ? '1mo' : ($rangeDays <= 95 ? '3mo' : '6mo');
+    $url = 'https://query2.finance.yahoo.com/v8/finance/chart/' . $encoded
+         . '?range=' . $range
+         . '&interval=1d&includePrePost=false&events=div%2Csplits';
+
+    $data = http_json($url, 12);
+    $result = $data['chart']['result'][0] ?? null;
+    if (!is_array($result)) {
+        return [];
+    }
+
+    $timestamps = $result['timestamp'] ?? [];
+    $adjClose = $result['indicators']['adjclose'][0]['adjclose'] ?? [];
+    $close = $result['indicators']['quote'][0]['close'] ?? [];
+    if (!is_array($timestamps) || !$timestamps) {
+        return [];
+    }
+
+    $series = [];
+    foreach ($timestamps as $index => $ts) {
+        if (!$ts) continue;
+        $value = $adjClose[$index] ?? $close[$index] ?? null;
+        if ($value === null || !is_numeric($value)) continue;
+        $date = gmdate('Y-m-d', (int)$ts);
+        $series[$date] = (float)$value;
+    }
+
+    ksort($series);
+    return $series;
+}
+
+function compute_return_series(array $series): array {
+    ksort($series);
+    $returns = [];
+    $prev = null;
+    foreach ($series as $date => $value) {
+        $value = (float)$value;
+        if ($prev !== null && $prev > 0) {
+            $returns[$date] = (($value - $prev) / $prev) * 100;
+        }
+        $prev = $value;
+    }
+    return $returns;
+}
+
+function pearson_correlation(array $xs, array $ys): ?float {
+    $count = count($xs);
+    if ($count < 2 || $count !== count($ys)) {
+        return null;
+    }
+
+    $sumX = array_sum($xs);
+    $sumY = array_sum($ys);
+    $meanX = $sumX / $count;
+    $meanY = $sumY / $count;
+    $cov = 0.0;
+    $varX = 0.0;
+    $varY = 0.0;
+
+    for ($index = 0; $index < $count; $index++) {
+        $dx = $xs[$index] - $meanX;
+        $dy = $ys[$index] - $meanY;
+        $cov += $dx * $dy;
+        $varX += $dx * $dx;
+        $varY += $dy * $dy;
+    }
+
+    if ($varX <= 0 || $varY <= 0) {
+        return null;
+    }
+
+    return $cov / sqrt($varX * $varY);
+}
+
+function latest_overlap_analysis(array $goldReturns, array $assetReturns): array {
+    $dates = array_values(array_intersect(array_keys($goldReturns), array_keys($assetReturns)));
+    sort($dates);
+    if (!$dates) {
+        return ['dates' => [], 'gold_last' => null, 'asset_last' => null, 'corr_5d' => null, 'corr_20d' => null];
+    }
+
+    $pairValues = static function (array $selectedDates) use ($goldReturns, $assetReturns): array {
+        $xs = [];
+        $ys = [];
+        foreach ($selectedDates as $date) {
+            $xs[] = (float)$goldReturns[$date];
+            $ys[] = (float)$assetReturns[$date];
+        }
+        return [$xs, $ys];
+    };
+
+    $corrForWindow = static function (int $window) use ($dates, $pairValues): ?float {
+        if (count($dates) < $window) return null;
+        [$xs, $ys] = $pairValues(array_slice($dates, -$window));
+        return pearson_correlation($xs, $ys);
+    };
+
+    $lastDate = $dates[count($dates) - 1];
+    return [
+        'dates'      => $dates,
+        'gold_last'  => (float)$goldReturns[$lastDate],
+        'asset_last' => (float)$assetReturns[$lastDate],
+        'corr_5d'    => $corrForWindow(5),
+        'corr_20d'   => $corrForWindow(20),
+    ];
+}
+
+function correlation_direction(?float $value, float $threshold = 0.2): int {
+    if ($value === null) return 0;
+    if ($value > $threshold) return 1;
+    if ($value < -$threshold) return -1;
+    return 0;
+}
+
+function market_move_word(?float $value): string {
+    if ($value === null) return 'flat';
+    if ($value > 0.03) return 'rising';
+    if ($value < -0.03) return 'falling';
+    return 'flat';
+}
+
+function build_correlation_note(string $label, string $goldMove, string $assetMove): string {
+    if ($goldMove === 'flat' || $assetMove === 'flat') {
+        return 'One leg is flat';
+    }
+    if ($goldMove === $assetMove) {
+        return 'Gold and ' . $label . ' both ' . $goldMove;
+    }
+    return 'Gold ' . $goldMove . ' while ' . $label . ' is ' . $assetMove;
+}
+
+function evaluate_correlation_row(array $meta, array $goldReturns, array $assetReturns): ?array {
+    $analysis = latest_overlap_analysis($goldReturns, $assetReturns);
+    if (count($analysis['dates']) < 20) {
+        return null;
+    }
+
+    $corr5 = $analysis['corr_5d'];
+    $corr20 = $analysis['corr_20d'];
+    $goldLast = $analysis['gold_last'];
+    $assetLast = $analysis['asset_last'];
+    $goldMove = market_move_word($goldLast);
+    $assetMove = market_move_word($assetLast);
+    $baseline = $meta['expected_sign'] ?? 0;
+    if ($baseline === 0) {
+        $baseline = correlation_direction($corr20, 0.15);
+    }
+
+    $dir20 = correlation_direction($corr20, 0.15);
+    $dir5 = correlation_direction($corr5, 0.15);
+    $sameDirectionToday = $goldMove !== 'flat' && $assetMove !== 'flat' && $goldMove === $assetMove;
+    $oppositeDirectionToday = $goldMove !== 'flat' && $assetMove !== 'flat' && $goldMove !== $assetMove;
+    $todayBreaksBaseline = ($baseline < 0 && $sameDirectionToday) || ($baseline > 0 && $oppositeDirectionToday);
+    $windowFlip = $dir20 !== 0 && $dir5 !== 0 && $dir20 !== $dir5;
+    $spread = ($corr5 !== null && $corr20 !== null) ? abs($corr5 - $corr20) : 0.0;
+
+    $state = 'stable';
+    $stateLabel = 'Intact';
+    $tone = 'up';
+    if (($todayBreaksBaseline && abs((float)$corr20) >= 0.2) || $windowFlip || ($spread >= 0.45 && abs((float)$corr20) >= 0.3)) {
+        $state = 'breakdown';
+        $stateLabel = 'Breakdown';
+        $tone = 'down';
+    } elseif ($spread >= 0.25 || ($dir20 !== 0 && $dir5 === 0)) {
+        $state = 'shifting';
+        $stateLabel = 'Shifting';
+        $tone = 'flat';
+    }
+
+    $note = build_correlation_note($meta['short_label'], $goldMove, $assetMove);
+    $relationship = $baseline < 0 ? 'Inverse bias' : ($baseline > 0 ? 'Positive bias' : 'No clear bias');
+
+    return [
+        'key'              => $meta['key'],
+        'label'            => $meta['label'],
+        'short_label'      => $meta['short_label'],
+        'corr_5d'          => $corr5 !== null ? round($corr5, 2) : null,
+        'corr_20d'         => $corr20 !== null ? round($corr20, 2) : null,
+        'state'            => $state,
+        'state_label'      => $stateLabel,
+        'tone'             => $tone,
+        'note'             => $note,
+        'relationship'     => $relationship,
+        'gold_last_change' => $goldLast !== null ? round($goldLast, 2) : null,
+        'asset_last_change'=> $assetLast !== null ? round($assetLast, 2) : null,
+        'severity'         => $state === 'breakdown' ? 3 : ($state === 'shifting' ? 2 : 1),
+    ];
+}
+
+function build_correlation_summary(array $rows): string {
+    if (!$rows) {
+        return 'Correlation signals unavailable.';
+    }
+
+    usort($rows, static function (array $a, array $b): int {
+        return $b['severity'] <=> $a['severity'];
+    });
+
+    $lead = $rows[0];
+    if (($lead['state'] ?? '') === 'breakdown') {
+        return $lead['note'] . ' -> correlation breakdown -> trend instability likely';
+    }
+    if (($lead['state'] ?? '') === 'shifting') {
+        return $lead['note'] . ' -> short-term correlation is drifting';
+    }
+    return 'USD, yields, equities, and oil are broadly respecting their recent gold relationships.';
+}
+
+function fetch_correlations(array $cfg): ?array {
+    $cached = cache_get('correlations', $cfg['cache_stocks'] ?? 180, $cfg['cache_dir']);
+    if ($cached) return $cached;
+
+    $goldSeries = fetch_gold_timeframe_series($cfg, 90);
+    if (count($goldSeries) < 25) {
+        return null;
+    }
+    $goldReturns = compute_return_series($goldSeries);
+
+    $markets = [
+        ['key' => 'usd',    'label' => 'US Dollar',   'short_label' => 'USD',      'symbol' => 'UUP',  'expected_sign' => -1],
+        ['key' => 'yields', 'label' => 'US 10Y Yield','short_label' => 'yields',   'symbol' => '^TNX', 'expected_sign' => -1],
+        ['key' => 'spx',    'label' => 'S&P 500',     'short_label' => 'S&P 500',  'symbol' => 'SPY',  'expected_sign' => 0],
+        ['key' => 'oil',    'label' => 'WTI Oil',     'short_label' => 'oil',      'symbol' => 'CL=F', 'expected_sign' => 1],
+    ];
+
+    $rows = [];
+    foreach ($markets as $market) {
+        $series = fetch_yahoo_chart_series($market['symbol'], 90);
+        if (count($series) < 25) {
+            continue;
+        }
+        $row = evaluate_correlation_row($market, $goldReturns, compute_return_series($series));
+        if ($row) {
+            $rows[] = $row;
+        }
+    }
+
+    if (!$rows) {
+        return null;
+    }
+
+    $payload = [
+        'generated_at' => gmdate('c'),
+        'summary'      => build_correlation_summary($rows),
+        'rows'         => $rows,
+    ];
+    cache_set('correlations', $payload, $cfg['cache_dir']);
+    return $payload;
+}
+
 // ─── news from local SQLite (populated by cron) ────────────────────────
 function fetch_news(array $cfg, int $limit = 20): array {
     $cached = cache_get('news_' . $limit, $cfg['cache_news'], $cfg['cache_dir']);
@@ -734,6 +1064,11 @@ if (empty($stocks['macro'])) {
     $warnings[] = 'Macro market feed unavailable — Correlated Markets may be empty.';
 }
 
+$correlations = fetch_correlations($CONFIG);
+if (empty($correlations['rows'])) {
+    $warnings[] = 'Correlation dashboard unavailable — historical market series could not be built.';
+}
+
 $news = fetch_news($CONFIG, 20);
 if (empty($news)) {
     $warnings[] = 'News database empty — has the cron run yet?';
@@ -761,6 +1096,7 @@ $payload = [
     'news'             => $news,
     'corgano_articles' => $corgano_articles,
     'seasonality'      => $seasonality,
+    'correlations'     => $correlations,
     'kgx'              => $kgx,
     'fallback_active'  => $fallback_active,
     'fallback_charts'  => $CONFIG['fallback_charts'] ?? [],
